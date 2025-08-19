@@ -1,0 +1,19 @@
+openssl_conf = openssl_init
+
+
+[openssl_init]
+providers = provider_sect
+
+
+[provider_sect]
+default = default_sect
+kookminlib = kookminprovider_sect
+
+
+[default_sect]
+activate = 1
+
+
+[kookminprovider_sect]
+module = kookminlib.so # sesuaikan path install
+activate = 1

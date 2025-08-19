@@ -1,0 +1,37 @@
+find_path(liboqs_INCLUDE_DIRS
+  NAMES oqs/oqs.h
+  HINTS $ENV{OQS_DIR}/include ${OQS_DIR}/include
+        /usr/local/include /usr/include /opt/homebrew/include
+        /opt/liboqs/include
+)
+
+find_library(liboqs_LIBRARIES
+  NAMES oqs liboqs
+  HINTS $ENV{OQS_DIR}/lib ${OQS_DIR}/lib
+        /usr/local/lib /usr/local/lib64
+        /usr/lib /usr/lib64
+        /usr/lib/x86_64-linux-gnu
+        /opt/homebrew/lib
+        /opt/liboqs/lib
+)
+
+# Fallback ke pkg-config jika perlu
+if(NOT liboqs_INCLUDE_DIRS OR NOT liboqs_LIBRARIES)
+  find_package(PkgConfig QUIET)
+  if(PkgConfig_FOUND)
+    pkg_check_modules(PC_LIBOQS QUIET liboqs)
+    if(PC_LIBOQS_FOUND)
+      if(NOT liboqs_INCLUDE_DIRS)
+        set(liboqs_INCLUDE_DIRS ${PC_LIBOQS_INCLUDE_DIRS})
+      endif()
+      if(NOT liboqs_LIBRARIES)
+        set(liboqs_LIBRARIES ${PC_LIBOQS_LINK_LIBRARIES})
+      endif()
+    endif()
+  endif()
+endif()
+
+include(FindPackageHandleStandardArgs)
+find_package_handle_standard_args(liboqs DEFAULT_MSG liboqs_INCLUDE_DIRS liboqs_LIBRARIES)
+
+mark_as_advanced(liboqs_INCLUDE_DIRS liboqs_LIBRARIES)
