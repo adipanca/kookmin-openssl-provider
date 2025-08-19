@@ -4,7 +4,7 @@
 # compile C with /usr/bin/cc
 C_DEFINES = -Dkookminlib_EXPORTS
 
-C_INCLUDES = -I/opt/liboqs/include -I/home/admin-vb/kookmin-provider/include -isystem /opt/openssl-master/include
+C_INCLUDES = -I/opt/liboqs/include -I/home/ubuntu/kookmin-openssl-provider/include -isystem /opt/openssl-master/include
 
 C_FLAGS = -O3 -DNDEBUG -std=gnu11 -fPIC
 

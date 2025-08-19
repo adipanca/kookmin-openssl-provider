@@ -57,10 +57,10 @@ RM = /usr/bin/cmake -E rm -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/admin-vb/kookmin-provider
+CMAKE_SOURCE_DIR = /home/ubuntu/kookmin-openssl-provider
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/admin-vb/kookmin-provider/build
+CMAKE_BINARY_DIR = /home/ubuntu/kookmin-openssl-provider/build
 
 #=============================================================================
 # Targets provided globally by CMake.
@@ -132,9 +132,9 @@ install/strip/fast: preinstall/fast
 
 # The main all target
 all: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/admin-vb/kookmin-provider/build/CMakeFiles /home/admin-vb/kookmin-provider/build//CMakeFiles/progress.marks
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/ubuntu/kookmin-openssl-provider/build/CMakeFiles /home/ubuntu/kookmin-openssl-provider/build//CMakeFiles/progress.marks
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 all
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/admin-vb/kookmin-provider/build/CMakeFiles 0
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/ubuntu/kookmin-openssl-provider/build/CMakeFiles 0
 .PHONY : all
 
 # The main clean target

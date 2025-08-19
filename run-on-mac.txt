@@ -1,3 +1,24 @@
+sudo apt update
+sudo apt install build-essential perl git libssl-dev cmake automake libtool gcc tree
+
+git clone --branch openssl-3.0 https://github.com/openssl/openssl.git
+cd ~/openssl
+
+./config --prefix=/opt/openssl-master --openssldir=/opt/openssl-master/ssl shared enable-fips enable-tls1_3 
+
+make -j$(nproc) # Menggunakan semua core CPU yang tersedia untuk kompilasi lebih cepat
+
+sudo make install
+
+echo 'export PATH="/opt/openssl-master/bin:$PATH"' >> ~/.bashrc
+echo 'export LD_LIBRARY_PATH="/opt/openssl-master/lib:$LD_LIBRARY_PATH"' >> ~/.bashrc
+source ~/.bashrc # Muat ulang konfigurasi shell
+
+export PATH="/opt/openssl-master/bin:$PATH"
+export LD_LIBRARY_PATH="/opt/openssl-master/lib:$LD_LIBRARY_PATH"
+
+openssl version
+
 ============================================================================================================================================
 
 cd ~ # Kembali ke direktori home atau lokasi proyek Anda
@@ -16,7 +37,7 @@ cmake .. \
   -DOQS_ENABLE_KEM_NTRUPRIME=ON \
   -DCMAKE_BUILD_TYPE=Release \
   -DOPENSSL_ROOT_DIR=/opt/openssl-master \
-  -DOPENSSL_LIBRARIES=/opt/openssl-master/lib64 \
+  -DOPENSSL_LIBRARIES=/opt/openssl-master/lib \
   -DOPENSSL_INCLUDE_DIR=/opt/openssl-master/include
 
 make -j$(nproc)
@@ -24,17 +45,19 @@ sudo make install
 
 ============================================================================================================================================
 
-cd ~/kookmin-provider
+git clone https://github.com/adipanca/kookmin-openssl-provider.git
+
+cd ~/kookmin-openssl-provider
 rm -rf build
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
   -DOPENSSL_ROOT_DIR=/opt/openssl-master \
   -DCMAKE_INSTALL_PREFIX=/opt/openssl-master \
-  -DCMAKE_INSTALL_LIBDIR=lib64
+  -DCMAKE_INSTALL_LIBDIR=lib
 cmake --build build -j
 sudo cmake --install build
 # verifikasi
-ls -l /opt/openssl-master/lib64/ossl-modules/kookminlib.so
-cd ~/kookmin-provider/tests
+ls -l /opt/openssl-master/lib/ossl-modules/kookminlib.so
+cd ~/kookmin-openssl-provider/tests
 
 
 sudo nano /opt/openssl-master/ssl/openssl.cnf
@@ -70,9 +93,9 @@ sudo ldconfig
 ldconfig -p | grep liboqs   # harus ada entri liboqs
 
 
-ldd /opt/openssl-master/lib64/ossl-modules/kookminlib.so
+ldd /opt/openssl-master/lib/ossl-modules/kookminlib.so
 
-export OPENSSL_MODULES=/opt/openssl-master/lib64/ossl-modules
+export OPENSSL_MODULES=/opt/openssl-master/lib/ossl-modules
 /opt/openssl-master/bin/openssl list -providers -provider default -provider kookminlib
 
 /opt/openssl-master/bin/openssl list -signature-algorithms -provider default -provider kookminlib
@@ -87,23 +110,23 @@ export OPENSSL_MODULES=/opt/openssl-master/lib64/ossl-modules
 
 
 
-export OPENSSL_MODULES=/opt/openssl-master/lib64/ossl-modules
+export OPENSSL_MODULES=/opt/openssl-master/lib/ossl-modules
 
 cc test_sig.c -o test_sig \
   -I/opt/openssl-master/include \
-  -L/opt/openssl-master/lib64 -lcrypto \
-  -Wl,-rpath,/opt/openssl-master/lib64
+  -L/opt/openssl-master/lib -lcrypto \
+  -Wl,-rpath,/opt/openssl-master/lib
 
 ./test_sig
 # Harus terlihat: [mldsa44] OK ... , [mldsa65] OK ... , [mldsa87] OK ...
 
 
-export OPENSSL_MODULES=/opt/openssl-master/lib64/ossl-modules
+export OPENSSL_MODULES=/opt/openssl-master/lib/ossl-modules
 
 cc test_kem.c -o test_kem \
   -I/opt/openssl-master/include \
-  -L/opt/openssl-master/lib64 -lcrypto \
-  -Wl,-rpath,/opt/openssl-master/lib64
+  -L/opt/openssl-master/lib -lcrypto \
+  -Wl,-rpath,/opt/openssl-master/lib
 
 ./test_kem
 # Harus terlihat: [MLKEM512] OK..., [MLKEM768] OK..., [MLKEM1024] OK...
