@@ -1,4 +1,8 @@
 file(REMOVE_RECURSE
+  "CMakeFiles/kookminlib.dir/src/dec_raw.c.o"
+  "CMakeFiles/kookminlib.dir/src/dec_raw.c.o.d"
+  "CMakeFiles/kookminlib.dir/src/enc_raw.c.o"
+  "CMakeFiles/kookminlib.dir/src/enc_raw.c.o.d"
   "CMakeFiles/kookminlib.dir/src/kem/kem_keymgmt.c.o"
   "CMakeFiles/kookminlib.dir/src/kem/kem_keymgmt.c.o.d"
   "CMakeFiles/kookminlib.dir/src/kem/kem_ops.c.o"

@@ -7,6 +7,8 @@
 /* ---------- forward ---------- */
 extern const OSSL_ALGORITHM km_algs_signature[];   /* sig_ops.c */
 extern const OSSL_ALGORITHM km_algs_kem[];         /* kem_ops.c */
+extern const OSSL_ALGORITHM km_algs_encoder[];
+extern const OSSL_ALGORITHM km_algs_decoder[];
 
 extern const OSSL_DISPATCH km_sig_keymgmt_fns_mldsa44[]; /* sig_keymgmt.c */
 extern const OSSL_DISPATCH km_sig_keymgmt_fns_mldsa65[];
@@ -29,10 +31,13 @@ static const OSSL_ALGORITHM km_algs_keymgmt_all[] = {
 
 static const OSSL_ALGORITHM *km_query_operation(void *provctx, int op, int *no_cache) {
     (void)provctx; (void)no_cache;
+    *no_cache = 0; // Set untuk semua operasi
     switch (op) {
         case OSSL_OP_SIGNATURE: return km_algs_signature;
         case OSSL_OP_KEM:       return km_algs_kem;          /* <-- baru */
         case OSSL_OP_KEYMGMT:   return km_algs_keymgmt_all;  /* <-- gabungan */
+        case OSSL_OP_ENCODER:   return km_algs_encoder;   // <— baru
+        case OSSL_OP_DECODER:   return km_algs_decoder;   // <— baru
         default:                return NULL;
     }
 }
@@ -79,10 +84,25 @@ int OSSL_provider_init(const OSSL_CORE_HANDLE *handle,
                        const OSSL_DISPATCH *in,
                        const OSSL_DISPATCH **out,
                        void **provctx) {
+    fprintf(stderr, "[DEBUG] Provider init called\n");
     (void)in;
     KM_PROVCTX *p = km_provctx_new(handle);
     if (!p) return 0;
+    /* Ambil fungsi Core BIO yang tersedia di 3.0 */
+    for (const OSSL_DISPATCH *f = in; f && f->function_id != 0; f++) {
+        switch (f->function_id) {
+        case OSSL_FUNC_BIO_WRITE_EX:
+            p->core_bio_write_ex = OSSL_FUNC_BIO_write_ex(f);
+            break;
+        case OSSL_FUNC_BIO_READ_EX:
+            p->core_bio_read_ex  = OSSL_FUNC_BIO_read_ex(f);
+            break;
+        default:
+            break;
+        }
+    }
     *provctx = p;
     *out = km_dispatch_table;
+    fprintf(stderr, "[DEBUG] Provider init successful\n");
     return 1;
 }

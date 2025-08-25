@@ -8,6 +8,8 @@ set(CMAKE_DEPENDS_LANGUAGES
 
 # The set of dependency files which are needed:
 set(CMAKE_DEPENDS_DEPENDENCY_FILES
+  "/home/ubuntu/kookmin-openssl-provider/src/dec_raw.c" "CMakeFiles/kookminlib.dir/src/dec_raw.c.o" "gcc" "CMakeFiles/kookminlib.dir/src/dec_raw.c.o.d"
+  "/home/ubuntu/kookmin-openssl-provider/src/enc_raw.c" "CMakeFiles/kookminlib.dir/src/enc_raw.c.o" "gcc" "CMakeFiles/kookminlib.dir/src/enc_raw.c.o.d"
   "/home/ubuntu/kookmin-openssl-provider/src/kem/kem_keymgmt.c" "CMakeFiles/kookminlib.dir/src/kem/kem_keymgmt.c.o" "gcc" "CMakeFiles/kookminlib.dir/src/kem/kem_keymgmt.c.o.d"
   "/home/ubuntu/kookmin-openssl-provider/src/kem/kem_ops.c" "CMakeFiles/kookminlib.dir/src/kem/kem_ops.c.o" "gcc" "CMakeFiles/kookminlib.dir/src/kem/kem_ops.c.o.d"
   "/home/ubuntu/kookmin-openssl-provider/src/km_util.c" "CMakeFiles/kookminlib.dir/src/km_util.c.o" "gcc" "CMakeFiles/kookminlib.dir/src/km_util.c.o.d"

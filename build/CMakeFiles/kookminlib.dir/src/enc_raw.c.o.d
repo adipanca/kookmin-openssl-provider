@@ -1,5 +1,5 @@
-CMakeFiles/kookminlib.dir/src/provider_core.c.o: \
- /home/ubuntu/kookmin-openssl-provider/src/provider_core.c \
+CMakeFiles/kookminlib.dir/src/enc_raw.c.o: \
+ /home/ubuntu/kookmin-openssl-provider/src/enc_raw.c \
  /usr/include/stdc-predef.h \
  /home/ubuntu/kookmin-openssl-provider/include/km_provider.h \
  /opt/openssl-master/include/openssl/bio.h \
@@ -117,7 +117,16 @@ CMakeFiles/kookminlib.dir/src/provider_core.c.o: \
  /opt/liboqs/include/oqs/sig_slh_dsa.h /opt/liboqs/include/oqs/sig_stfl.h \
  /opt/liboqs/include/oqs/aes_ops.h /opt/liboqs/include/oqs/sha2_ops.h \
  /opt/liboqs/include/oqs/sha3_ops.h /opt/liboqs/include/oqs/sha3x4_ops.h \
- /opt/openssl-master/include/openssl/core_object.h /usr/include/string.h \
- /usr/include/strings.h \
+ /opt/openssl-master/include/openssl/core_object.h \
+ /home/ubuntu/kookmin-openssl-provider/include/km_util_io.h \
+ /usr/include/string.h /usr/include/strings.h \
  /usr/include/aarch64-linux-gnu/bits/strings_fortified.h \
- /usr/include/aarch64-linux-gnu/bits/string_fortified.h
+ /usr/include/aarch64-linux-gnu/bits/string_fortified.h \
+ /home/ubuntu/kookmin-openssl-provider/include/km_kem.h \
+ /opt/openssl-master/include/openssl/evp.h \
+ /opt/openssl-master/include/openssl/evperr.h \
+ /opt/openssl-master/include/openssl/objects.h \
+ /opt/openssl-master/include/openssl/obj_mac.h \
+ /opt/openssl-master/include/openssl/asn1.h \
+ /opt/openssl-master/include/openssl/asn1err.h \
+ /opt/openssl-master/include/openssl/objectserr.h

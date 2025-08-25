@@ -33,6 +33,10 @@ add_library(kookminlib MODULE
     # KEM
     src/kem/kem_ops.c
     src/kem/kem_keymgmt.c
+
+    #enc dec
+    src/enc_raw.c      # <— baru
+    src/dec_raw.c      # <— baru
 )
 
 

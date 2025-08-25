@@ -174,6 +174,54 @@ kookminlib/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/kookminlib.dir/build.make CMakeFiles/kookminlib.dir/build
 .PHONY : kookminlib/fast
 
+src/dec_raw.o: src/dec_raw.c.o
+.PHONY : src/dec_raw.o
+
+# target to build an object file
+src/dec_raw.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kookminlib.dir/build.make CMakeFiles/kookminlib.dir/src/dec_raw.c.o
+.PHONY : src/dec_raw.c.o
+
+src/dec_raw.i: src/dec_raw.c.i
+.PHONY : src/dec_raw.i
+
+# target to preprocess a source file
+src/dec_raw.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kookminlib.dir/build.make CMakeFiles/kookminlib.dir/src/dec_raw.c.i
+.PHONY : src/dec_raw.c.i
+
+src/dec_raw.s: src/dec_raw.c.s
+.PHONY : src/dec_raw.s
+
+# target to generate assembly for a file
+src/dec_raw.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kookminlib.dir/build.make CMakeFiles/kookminlib.dir/src/dec_raw.c.s
+.PHONY : src/dec_raw.c.s
+
+src/enc_raw.o: src/enc_raw.c.o
+.PHONY : src/enc_raw.o
+
+# target to build an object file
+src/enc_raw.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kookminlib.dir/build.make CMakeFiles/kookminlib.dir/src/enc_raw.c.o
+.PHONY : src/enc_raw.c.o
+
+src/enc_raw.i: src/enc_raw.c.i
+.PHONY : src/enc_raw.i
+
+# target to preprocess a source file
+src/enc_raw.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kookminlib.dir/build.make CMakeFiles/kookminlib.dir/src/enc_raw.c.i
+.PHONY : src/enc_raw.c.i
+
+src/enc_raw.s: src/enc_raw.c.s
+.PHONY : src/enc_raw.s
+
+# target to generate assembly for a file
+src/enc_raw.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kookminlib.dir/build.make CMakeFiles/kookminlib.dir/src/enc_raw.c.s
+.PHONY : src/enc_raw.c.s
+
 src/kem/kem_keymgmt.o: src/kem/kem_keymgmt.c.o
 .PHONY : src/kem/kem_keymgmt.o
 
@@ -331,6 +379,12 @@ help:
 	@echo "... list_install_components"
 	@echo "... rebuild_cache"
 	@echo "... kookminlib"
+	@echo "... src/dec_raw.o"
+	@echo "... src/dec_raw.i"
+	@echo "... src/dec_raw.s"
+	@echo "... src/enc_raw.o"
+	@echo "... src/enc_raw.i"
+	@echo "... src/enc_raw.s"
 	@echo "... src/kem/kem_keymgmt.o"
 	@echo "... src/kem/kem_keymgmt.i"
 	@echo "... src/kem/kem_keymgmt.s"

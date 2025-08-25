@@ -1,5 +1,5 @@
-CMakeFiles/kookminlib.dir/src/provider_core.c.o: \
- /home/ubuntu/kookmin-openssl-provider/src/provider_core.c \
+CMakeFiles/kookminlib.dir/src/dec_raw.c.o: \
+ /home/ubuntu/kookmin-openssl-provider/src/dec_raw.c \
  /usr/include/stdc-predef.h \
  /home/ubuntu/kookmin-openssl-provider/include/km_provider.h \
  /opt/openssl-master/include/openssl/bio.h \
@@ -117,7 +117,40 @@ CMakeFiles/kookminlib.dir/src/provider_core.c.o: \
  /opt/liboqs/include/oqs/sig_slh_dsa.h /opt/liboqs/include/oqs/sig_stfl.h \
  /opt/liboqs/include/oqs/aes_ops.h /opt/liboqs/include/oqs/sha2_ops.h \
  /opt/liboqs/include/oqs/sha3_ops.h /opt/liboqs/include/oqs/sha3x4_ops.h \
- /opt/openssl-master/include/openssl/core_object.h /usr/include/string.h \
+ /opt/openssl-master/include/openssl/core_object.h \
+ /opt/openssl-master/include/openssl/param_build.h \
+ /opt/openssl-master/include/openssl/evp.h \
+ /opt/openssl-master/include/openssl/evperr.h \
+ /opt/openssl-master/include/openssl/objects.h \
+ /opt/openssl-master/include/openssl/obj_mac.h \
+ /opt/openssl-master/include/openssl/asn1.h \
+ /opt/openssl-master/include/openssl/asn1err.h \
+ /opt/openssl-master/include/openssl/objectserr.h \
+ /opt/openssl-master/include/openssl/decoder.h \
+ /opt/openssl-master/include/openssl/decodererr.h \
+ /opt/openssl-master/include/openssl/pem.h \
+ /opt/openssl-master/include/openssl/x509.h \
+ /opt/openssl-master/include/openssl/buffer.h \
+ /opt/openssl-master/include/openssl/buffererr.h \
+ /opt/openssl-master/include/openssl/ec.h /usr/include/string.h \
  /usr/include/strings.h \
  /usr/include/aarch64-linux-gnu/bits/strings_fortified.h \
- /usr/include/aarch64-linux-gnu/bits/string_fortified.h
+ /usr/include/aarch64-linux-gnu/bits/string_fortified.h \
+ /opt/openssl-master/include/openssl/ecerr.h \
+ /opt/openssl-master/include/openssl/rsa.h \
+ /opt/openssl-master/include/openssl/rsaerr.h \
+ /opt/openssl-master/include/openssl/dsa.h \
+ /opt/openssl-master/include/openssl/dh.h \
+ /opt/openssl-master/include/openssl/dherr.h \
+ /opt/openssl-master/include/openssl/dsaerr.h \
+ /opt/openssl-master/include/openssl/sha.h \
+ /opt/openssl-master/include/openssl/x509err.h \
+ /opt/openssl-master/include/openssl/x509_vfy.h \
+ /opt/openssl-master/include/openssl/lhash.h \
+ /opt/openssl-master/include/openssl/pkcs7.h \
+ /opt/openssl-master/include/openssl/pkcs7err.h \
+ /opt/openssl-master/include/openssl/http.h \
+ /opt/openssl-master/include/openssl/conf.h \
+ /opt/openssl-master/include/openssl/conferr.h \
+ /opt/openssl-master/include/openssl/conftypes.h \
+ /opt/openssl-master/include/openssl/pemerr.h /usr/include/ctype.h

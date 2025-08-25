@@ -1,0 +1,66 @@
+[DEBUG] Provider init called
+[DEBUG] Provider init successful
+[decoder] does_selection sel=0x1 -> 1
+[decoder] does_selection sel=0x1 -> 1
+[decoder] does_selection sel=0x1 -> 1
+[decoder] does_selection sel=0x1 -> 1
+[decoder] does_selection sel=0x1 -> 1
+[decoder] does_selection sel=0x1 -> 1
+[decoder] called
+[read_all_core] r=1 n=3540 len=0
+[read_all_core] grow -> 8192
+[read_all_core] r=0 n=0 len=3540
+[read_all_core] done len=3540
+[read_all_core] end
+[find_pem_block] called
+[decoder] found alg=mldsa44 b64len=3416
+[decoder] decoded sklen=2562
+[decoder] construct/import -> 0
+[mldsa44] DECODE from PEM fail
+== OpenSSL errors at DECODER_from_bio ==
+20903C2F97F80000:error:1E08010C:DECODER routines:OSSL_DECODER_from_bio:unsupported:crypto/encode_decode/decoder_lib.c:101:No supported data to decode. Input type: PEM
+== OpenSSL errors at roundtrip_one ==
+[decoder] does_selection sel=0x1 -> 1
+[decoder] does_selection sel=0x1 -> 1
+[decoder] does_selection sel=0x1 -> 1
+[decoder] does_selection sel=0x1 -> 1
+[decoder] does_selection sel=0x1 -> 1
+[decoder] does_selection sel=0x1 -> 1
+[decoder] called
+[read_all_core] r=1 n=4096 len=0
+[read_all_core] grow -> 8192
+[read_all_core] r=1 n=1434 len=4096
+[read_all_core] r=0 n=0 len=5530
+[read_all_core] done len=5530
+[read_all_core] end
+[find_pem_block] called
+[decoder] found alg=mldsa65 b64len=5376
+[decoder] decoded sklen=4032
+[decoder] construct/import -> 0
+[mldsa65] DECODE from PEM fail
+== OpenSSL errors at DECODER_from_bio ==
+20903C2F97F80000:error:1E08010C:DECODER routines:OSSL_DECODER_from_bio:unsupported:crypto/encode_decode/decoder_lib.c:101:No supported data to decode. Input type: PEM
+== OpenSSL errors at roundtrip_one ==
+[decoder] does_selection sel=0x1 -> 1
+[decoder] does_selection sel=0x1 -> 1
+[decoder] does_selection sel=0x1 -> 1
+[decoder] does_selection sel=0x1 -> 1
+[decoder] does_selection sel=0x1 -> 1
+[decoder] does_selection sel=0x1 -> 1
+[decoder] called
+[read_all_core] r=1 n=4096 len=0
+[read_all_core] grow -> 8192
+[read_all_core] r=1 n=2604 len=4096
+[read_all_core] r=0 n=0 len=6700
+[read_all_core] done len=6700
+[read_all_core] end
+[find_pem_block] called
+[decoder] found alg=mldsa87 b64len=6528
+[decoder] decoded sklen=4896
+[decoder] construct/import -> 0
+[mldsa87] DECODE from PEM fail
+== OpenSSL errors at DECODER_from_bio ==
+20903C2F97F80000:error:1E08010C:DECODER routines:OSSL_DECODER_from_bio:unsupported:crypto/encode_decode/decoder_lib.c:101:No supported data to decode. Input type: PEM
+== OpenSSL errors at roundtrip_one ==
+
+Some roundtrips FAILED

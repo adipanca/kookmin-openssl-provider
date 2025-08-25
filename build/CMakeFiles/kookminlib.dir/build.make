@@ -153,6 +153,34 @@ CMakeFiles/kookminlib.dir/src/kem/kem_keymgmt.c.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/kookminlib.dir/src/kem/kem_keymgmt.c.s"
 	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/ubuntu/kookmin-openssl-provider/src/kem/kem_keymgmt.c -o CMakeFiles/kookminlib.dir/src/kem/kem_keymgmt.c.s
 
+CMakeFiles/kookminlib.dir/src/enc_raw.c.o: CMakeFiles/kookminlib.dir/flags.make
+CMakeFiles/kookminlib.dir/src/enc_raw.c.o: /home/ubuntu/kookmin-openssl-provider/src/enc_raw.c
+CMakeFiles/kookminlib.dir/src/enc_raw.c.o: CMakeFiles/kookminlib.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/ubuntu/kookmin-openssl-provider/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_7) "Building C object CMakeFiles/kookminlib.dir/src/enc_raw.c.o"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/kookminlib.dir/src/enc_raw.c.o -MF CMakeFiles/kookminlib.dir/src/enc_raw.c.o.d -o CMakeFiles/kookminlib.dir/src/enc_raw.c.o -c /home/ubuntu/kookmin-openssl-provider/src/enc_raw.c
+
+CMakeFiles/kookminlib.dir/src/enc_raw.c.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing C source to CMakeFiles/kookminlib.dir/src/enc_raw.c.i"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/ubuntu/kookmin-openssl-provider/src/enc_raw.c > CMakeFiles/kookminlib.dir/src/enc_raw.c.i
+
+CMakeFiles/kookminlib.dir/src/enc_raw.c.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/kookminlib.dir/src/enc_raw.c.s"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/ubuntu/kookmin-openssl-provider/src/enc_raw.c -o CMakeFiles/kookminlib.dir/src/enc_raw.c.s
+
+CMakeFiles/kookminlib.dir/src/dec_raw.c.o: CMakeFiles/kookminlib.dir/flags.make
+CMakeFiles/kookminlib.dir/src/dec_raw.c.o: /home/ubuntu/kookmin-openssl-provider/src/dec_raw.c
+CMakeFiles/kookminlib.dir/src/dec_raw.c.o: CMakeFiles/kookminlib.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/ubuntu/kookmin-openssl-provider/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_8) "Building C object CMakeFiles/kookminlib.dir/src/dec_raw.c.o"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/kookminlib.dir/src/dec_raw.c.o -MF CMakeFiles/kookminlib.dir/src/dec_raw.c.o.d -o CMakeFiles/kookminlib.dir/src/dec_raw.c.o -c /home/ubuntu/kookmin-openssl-provider/src/dec_raw.c
+
+CMakeFiles/kookminlib.dir/src/dec_raw.c.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing C source to CMakeFiles/kookminlib.dir/src/dec_raw.c.i"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/ubuntu/kookmin-openssl-provider/src/dec_raw.c > CMakeFiles/kookminlib.dir/src/dec_raw.c.i
+
+CMakeFiles/kookminlib.dir/src/dec_raw.c.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/kookminlib.dir/src/dec_raw.c.s"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/ubuntu/kookmin-openssl-provider/src/dec_raw.c -o CMakeFiles/kookminlib.dir/src/dec_raw.c.s
+
 # Object files for target kookminlib
 kookminlib_OBJECTS = \
 "CMakeFiles/kookminlib.dir/src/provider_core.c.o" \
@@ -160,7 +188,9 @@ kookminlib_OBJECTS = \
 "CMakeFiles/kookminlib.dir/src/sig/sig_ops.c.o" \
 "CMakeFiles/kookminlib.dir/src/sig/sig_keymgmt.c.o" \
 "CMakeFiles/kookminlib.dir/src/kem/kem_ops.c.o" \
-"CMakeFiles/kookminlib.dir/src/kem/kem_keymgmt.c.o"
+"CMakeFiles/kookminlib.dir/src/kem/kem_keymgmt.c.o" \
+"CMakeFiles/kookminlib.dir/src/enc_raw.c.o" \
+"CMakeFiles/kookminlib.dir/src/dec_raw.c.o"
 
 # External object files for target kookminlib
 kookminlib_EXTERNAL_OBJECTS =
@@ -171,11 +201,13 @@ kookminlib.so: CMakeFiles/kookminlib.dir/src/sig/sig_ops.c.o
 kookminlib.so: CMakeFiles/kookminlib.dir/src/sig/sig_keymgmt.c.o
 kookminlib.so: CMakeFiles/kookminlib.dir/src/kem/kem_ops.c.o
 kookminlib.so: CMakeFiles/kookminlib.dir/src/kem/kem_keymgmt.c.o
+kookminlib.so: CMakeFiles/kookminlib.dir/src/enc_raw.c.o
+kookminlib.so: CMakeFiles/kookminlib.dir/src/dec_raw.c.o
 kookminlib.so: CMakeFiles/kookminlib.dir/build.make
 kookminlib.so: /opt/openssl-master/lib/libcrypto.so
 kookminlib.so: /opt/liboqs/lib/liboqs.so
 kookminlib.so: CMakeFiles/kookminlib.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/ubuntu/kookmin-openssl-provider/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_7) "Linking C shared module kookminlib.so"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/ubuntu/kookmin-openssl-provider/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_9) "Linking C shared module kookminlib.so"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/kookminlib.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.

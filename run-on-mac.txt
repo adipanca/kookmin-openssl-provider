@@ -48,12 +48,13 @@ sudo make install
 git clone https://github.com/adipanca/kookmin-openssl-provider.git
 
 cd ~/kookmin-openssl-provider
+find . -type f -not -path './.git/*' -exec touch -d "now" {} +
 rm -rf build
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
   -DOPENSSL_ROOT_DIR=/opt/openssl-master \
   -DCMAKE_INSTALL_PREFIX=/opt/openssl-master \
   -DCMAKE_INSTALL_LIBDIR=lib
-cmake --build build -j
+cmake --build build -j --clean-first
 sudo cmake --install build
 # verifikasi
 ls -l /opt/openssl-master/lib/ossl-modules/kookminlib.so
@@ -81,7 +82,7 @@ kookminlib = kookminlib_sect
 [kookminlib_sect]
 activate = 1
 identity = kookminlib
-path = /opt/openssl-master/lib64/ossl-modules/kookminlib.so
+path = /opt/openssl-master/lib/ossl-modules/kookminlib.so
 #module = kookminlib.so
 
 [default_sect]
@@ -104,6 +105,10 @@ export OPENSSL_MODULES=/opt/openssl-master/lib/ossl-modules
 
 /opt/openssl-master/bin/openssl list -key-managers -provider default -provider kookminlib
 
+/opt/openssl-master/bin/openssl list -providers -provider kookminlib -verbose
+
+/opt/openssl-master/bin/openssl list -encoders -provider kookminlib
+/opt/openssl-master/bin/openssl list -decoders -provider kookminlib
 
 
 /opt/openssl-master/bin/openssl list -providers -provider default -provider kookminlib
@@ -131,3 +136,35 @@ cc test_kem.c -o test_kem \
 ./test_kem
 # Harus terlihat: [MLKEM512] OK..., [MLKEM768] OK..., [MLKEM1024] OK...
 
+
+
+export OPENSSL_MODULES=/opt/openssl-master/lib/ossl-modules
+
+cc test_enc_sig_roundtrip.c -o test_enc_sig_roundtrip \
+  -I/opt/openssl-master/include -L/opt/openssl-master/lib -lcrypto \
+  -Wl,-rpath,/opt/openssl-master/lib
+
+./test_enc_sig_roundtrip
+# Harus tampil: [mldsa..] roundtrip verify=1
+
+
+
+cd ~/kookmin-openssl-provider
+find . -type f -not -path './.git/*' -exec touch -d "now" {} +
+rm -rf build
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
+  -DOPENSSL_ROOT_DIR=/opt/openssl-master \
+  -DCMAKE_INSTALL_PREFIX=/opt/openssl-master \
+  -DCMAKE_INSTALL_LIBDIR=lib
+cmake --build build -j --clean-first
+sudo cmake --install build
+# verifikasi
+ls -l /opt/openssl-master/lib/ossl-modules/kookminlib.so
+cd ~/kookmin-openssl-provider/tests
+export OPENSSL_MODULES=/opt/openssl-master/lib/ossl-modules
+
+cc test_enc_sig_roundtrip.c -o test_enc_sig_roundtrip \
+  -I/opt/openssl-master/include -L/opt/openssl-master/lib -lcrypto \
+  -Wl,-rpath,/opt/openssl-master/lib
+
+./test_enc_sig_roundtrip

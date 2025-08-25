@@ -3,13 +3,12 @@ CMakeFiles/kookminlib.dir/src/kem/kem_ops.c.o: \
  /usr/include/stdc-predef.h \
  /home/ubuntu/kookmin-openssl-provider/include/km_kem.h \
  /home/ubuntu/kookmin-openssl-provider/include/km_provider.h \
- /opt/openssl-master/include/openssl/core.h \
- /usr/lib/gcc/aarch64-linux-gnu/13/include/stddef.h \
- /opt/openssl-master/include/openssl/types.h \
- /usr/lib/gcc/aarch64-linux-gnu/13/include/limits.h \
- /usr/lib/gcc/aarch64-linux-gnu/13/include/syslimits.h \
- /usr/include/limits.h \
- /usr/include/aarch64-linux-gnu/bits/libc-header-start.h \
+ /opt/openssl-master/include/openssl/bio.h \
+ /opt/openssl-master/include/openssl/macros.h \
+ /opt/openssl-master/include/openssl/opensslconf.h \
+ /opt/openssl-master/include/openssl/configuration.h \
+ /opt/openssl-master/include/openssl/opensslv.h \
+ /opt/openssl-master/include/openssl/e_os2.h /usr/include/inttypes.h \
  /usr/include/features.h /usr/include/features-time64.h \
  /usr/include/aarch64-linux-gnu/bits/wordsize.h \
  /usr/include/aarch64-linux-gnu/bits/timesize.h \
@@ -17,31 +16,17 @@ CMakeFiles/kookminlib.dir/src/kem/kem_ops.c.o: \
  /usr/include/aarch64-linux-gnu/bits/long-double.h \
  /usr/include/aarch64-linux-gnu/gnu/stubs.h \
  /usr/include/aarch64-linux-gnu/gnu/stubs-lp64.h \
- /usr/include/aarch64-linux-gnu/bits/posix1_lim.h \
- /usr/include/aarch64-linux-gnu/bits/local_lim.h \
- /usr/include/linux/limits.h \
- /usr/include/aarch64-linux-gnu/bits/pthread_stack_min-dynamic.h \
- /usr/include/aarch64-linux-gnu/bits/pthread_stack_min.h \
- /usr/include/aarch64-linux-gnu/bits/posix2_lim.h \
- /opt/openssl-master/include/openssl/e_os2.h \
- /opt/openssl-master/include/openssl/macros.h \
- /opt/openssl-master/include/openssl/opensslconf.h \
- /opt/openssl-master/include/openssl/configuration.h \
- /opt/openssl-master/include/openssl/opensslv.h /usr/include/inttypes.h \
  /usr/lib/gcc/aarch64-linux-gnu/13/include/stdint.h /usr/include/stdint.h \
+ /usr/include/aarch64-linux-gnu/bits/libc-header-start.h \
  /usr/include/aarch64-linux-gnu/bits/types.h \
  /usr/include/aarch64-linux-gnu/bits/typesizes.h \
  /usr/include/aarch64-linux-gnu/bits/time64.h \
  /usr/include/aarch64-linux-gnu/bits/wchar.h \
  /usr/include/aarch64-linux-gnu/bits/stdint-intn.h \
  /usr/include/aarch64-linux-gnu/bits/stdint-uintn.h \
- /usr/include/aarch64-linux-gnu/bits/stdint-least.h \
- /opt/openssl-master/include/openssl/safestack.h \
- /opt/openssl-master/include/openssl/stack.h \
- /opt/openssl-master/include/openssl/core_dispatch.h \
+ /usr/include/aarch64-linux-gnu/bits/stdint-least.h /usr/include/stdio.h \
+ /usr/lib/gcc/aarch64-linux-gnu/13/include/stddef.h \
  /usr/lib/gcc/aarch64-linux-gnu/13/include/stdarg.h \
- /opt/openssl-master/include/openssl/params.h \
- /opt/openssl-master/include/openssl/bn.h /usr/include/stdio.h \
  /usr/include/aarch64-linux-gnu/bits/types/__fpos_t.h \
  /usr/include/aarch64-linux-gnu/bits/types/__mbstate_t.h \
  /usr/include/aarch64-linux-gnu/bits/types/__fpos64_t.h \
@@ -90,15 +75,30 @@ CMakeFiles/kookminlib.dir/src/kem/kem_ops.c.o: \
  /usr/include/aarch64-linux-gnu/bits/types/struct_itimerspec.h \
  /usr/include/aarch64-linux-gnu/bits/types/locale_t.h \
  /usr/include/aarch64-linux-gnu/bits/types/__locale_t.h \
+ /opt/openssl-master/include/openssl/safestack.h \
+ /opt/openssl-master/include/openssl/stack.h \
+ /opt/openssl-master/include/openssl/types.h \
+ /usr/lib/gcc/aarch64-linux-gnu/13/include/limits.h \
+ /usr/lib/gcc/aarch64-linux-gnu/13/include/syslimits.h \
+ /usr/include/limits.h /usr/include/aarch64-linux-gnu/bits/posix1_lim.h \
+ /usr/include/aarch64-linux-gnu/bits/local_lim.h \
+ /usr/include/linux/limits.h \
+ /usr/include/aarch64-linux-gnu/bits/pthread_stack_min-dynamic.h \
+ /usr/include/aarch64-linux-gnu/bits/pthread_stack_min.h \
+ /usr/include/aarch64-linux-gnu/bits/posix2_lim.h \
  /opt/openssl-master/include/openssl/cryptoerr.h \
  /opt/openssl-master/include/openssl/symhacks.h \
  /opt/openssl-master/include/openssl/cryptoerr_legacy.h \
- /usr/include/pthread.h /usr/include/sched.h \
- /usr/include/aarch64-linux-gnu/bits/sched.h \
+ /opt/openssl-master/include/openssl/core.h /usr/include/pthread.h \
+ /usr/include/sched.h /usr/include/aarch64-linux-gnu/bits/sched.h \
  /usr/include/aarch64-linux-gnu/bits/types/struct_sched_param.h \
  /usr/include/aarch64-linux-gnu/bits/cpu-set.h \
  /usr/include/aarch64-linux-gnu/bits/setjmp.h \
  /usr/include/aarch64-linux-gnu/bits/types/struct___jmp_buf_tag.h \
+ /opt/openssl-master/include/openssl/bioerr.h \
+ /opt/openssl-master/include/openssl/core_dispatch.h \
+ /opt/openssl-master/include/openssl/params.h \
+ /opt/openssl-master/include/openssl/bn.h \
  /opt/openssl-master/include/openssl/bnerr.h \
  /opt/openssl-master/include/openssl/core_names.h \
  /opt/liboqs/include/oqs/oqs.h /opt/liboqs/include/oqs/oqsconfig.h \
@@ -118,6 +118,7 @@ CMakeFiles/kookminlib.dir/src/kem/kem_ops.c.o: \
  /opt/liboqs/include/oqs/sig_slh_dsa.h /opt/liboqs/include/oqs/sig_stfl.h \
  /opt/liboqs/include/oqs/aes_ops.h /opt/liboqs/include/oqs/sha2_ops.h \
  /opt/liboqs/include/oqs/sha3_ops.h /opt/liboqs/include/oqs/sha3x4_ops.h \
- /usr/include/string.h /usr/include/strings.h \
+ /opt/openssl-master/include/openssl/core_object.h /usr/include/string.h \
+ /usr/include/strings.h \
  /usr/include/aarch64-linux-gnu/bits/strings_fortified.h \
  /usr/include/aarch64-linux-gnu/bits/string_fortified.h
