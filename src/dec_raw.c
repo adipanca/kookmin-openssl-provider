@@ -29,19 +29,6 @@ static void *km_dec_newctx(void *vprovctx) {
 }
 static void km_dec_freectx(void *v) { OPENSSL_free(v); }
 
-/* Jangan terlalu ketat di sini: always-on supaya tidak terfilter */
-// static int km_dec_does_selection(void *v, int selection) {
-//     (void)v; (void)selection;
-//     return 1;
-// }
-static int km_dec_does_selection(void *vctx, int selection) {
-    (void)vctx;
-    int ok = (selection & OSSL_KEYMGMT_SELECT_PRIVATE_KEY) != 0;
-    fprintf(stderr, "[decoder] does_selection sel=0x%x -> %d\n", selection, ok);
-    return ok;
-}
-
-
 
 /* ---------- Util: parse PEM ---------- */
 static int parse_pem(const char *txt, size_t len,
@@ -259,6 +246,110 @@ static int b64_decode(const unsigned char *in, size_t inlen,
 }
 
 /* ---------- decoder_decode (yang dipanggil OpenSSL) ---------- */
+// Perbaikan untuk dec_raw.c - khususnya fungsi decode
+
+// static int km_dec_decode(void *vctx,
+//                          OSSL_CORE_BIO *cin,
+//                          int selection,
+//                          OSSL_CALLBACK *cb, void *cbarg,
+//                          OSSL_PASSPHRASE_CALLBACK *pw_cb, void *pw_cbarg)
+// {
+//     (void)selection; (void)pw_cb; (void)pw_cbarg;
+
+//     KM_DEC_CTX *ctx = (KM_DEC_CTX*)vctx;
+//     KM_PROVCTX *prov = ctx ? ctx->provctx : NULL;
+//     if (!prov) return 0;
+
+//     fprintf(stderr, "[decoder] called with selection=0x%x\n", selection);
+
+//     /* 1) read all */
+//     unsigned char *txt = NULL; size_t tlen = 0;
+//     if (!read_all_core(prov, cin, &txt, &tlen)) {
+//         fprintf(stderr, "[decoder] ERROR: read_all_core failed\n");
+//         return 0;
+//     }
+//     fprintf(stderr, "[read_all_core] read %zu bytes\n", tlen);
+
+//     /* 2) find our MLDSA PEM block */
+//     const char *alg = NULL;
+//     const unsigned char *b64p = NULL; size_t b64len = 0;
+//     fprintf(stderr, "[find_pem_block] searching for MLDSA PEM block\n");
+//     if (!find_pem_block(txt, tlen, &alg, &b64p, &b64len)) {
+//         fprintf(stderr, "[decoder] ERROR: no MLDSA PEM header found\n");
+//         OPENSSL_free(txt);
+//         return 0;
+//     }
+//     fprintf(stderr, "[decoder] found algorithm: %s\n", alg);
+
+//     /* 3) base64 -> raw */
+//     unsigned char *b64tmp = OPENSSL_malloc(b64len + 1);
+//     if (!b64tmp) { OPENSSL_free(txt); return 0; }
+//     memcpy(b64tmp, b64p, b64len);
+//     b64tmp[b64len] = 0;
+//     strip_ws_inplace(b64tmp, &b64len);
+
+//     unsigned char *sk = NULL; size_t sklen = 0;
+//     int okb64 = b64_decode(b64tmp, b64len, &sk, &sklen);
+//     fprintf(stderr, "[decoder] b64 decode: ok=%d, sklen=%zu\n", okb64, sklen);
+//     OPENSSL_free(b64tmp);
+//     OPENSSL_free(txt);
+//     if (!okb64) return 0;
+
+//     /* 4) sanity (opsional) */
+//     size_t expected_privlen = 0;
+//     if (strcmp(alg, "mldsa44") == 0) expected_privlen = 2560;
+//     else if (strcmp(alg, "mldsa65") == 0) expected_privlen = 4032;
+//     else if (strcmp(alg, "mldsa87") == 0) expected_privlen = 4896;
+
+//     if (expected_privlen && sklen != expected_privlen) {
+//         fprintf(stderr, "[decoder] WARNING: decoded length %zu != expected %zu for %s\n",
+//                 sklen, expected_privlen, alg);
+//         /* OPSIONAL: trim trailing 2-bytes nul jika ada */
+//         if (sklen == expected_privlen + 2 && sk[sklen-1] == 0 && sk[sklen-2] == 0) {
+//             sklen = expected_privlen;
+//             fprintf(stderr, "[decoder] trimmed trailing 2 zero bytes -> %zu\n", sklen);
+//         }
+//     }
+
+//     /* 5) params -> construct(import) */
+//     OSSL_PARAM_BLD *bld = OSSL_PARAM_BLD_new();
+//     if (!bld) { OPENSSL_free(sk); return 0; }
+
+//     /* wajib: beri tahu jenis key agar core fetch KEYMGMT yang benar */
+//     if (!OSSL_PARAM_BLD_push_utf8_string(bld, OSSL_OBJECT_PARAM_DATA_TYPE, alg, 0))
+//         goto err;
+
+//     /* beri tahu ini “type-specific” (bukan PKCS8/SPKI) */
+//     if (!OSSL_PARAM_BLD_push_utf8_string(bld, OSSL_OBJECT_PARAM_DATA_STRUCTURE, "type-specific", 0))
+//         goto err;
+
+//     /* material kunci */
+//     if (!OSSL_PARAM_BLD_push_octet_string(bld, OSSL_PKEY_PARAM_PRIV_KEY, sk, sklen))
+//         goto err;
+
+//     OSSL_PARAM *out = OSSL_PARAM_BLD_to_param(bld);
+//     OSSL_PARAM_BLD_free(bld);
+//     OPENSSL_free(sk);
+//     if (!out) return 0;
+
+//     /* debug */
+//     fprintf(stderr, "[decoder] sending parameters to callback:\n");
+//     for (const OSSL_PARAM *pp = out; pp && pp->key; ++pp)
+//         fprintf(stderr, "[decoder]   param: %s (type=%d size=%zu)\n",
+//                 pp->key, pp->data_type, pp->data_size);
+
+//     /* 6) ke core -> construct -> keymgmt.import */
+//     int ok = cb(out, cbarg);
+//     fprintf(stderr, "[decoder] callback returned: %d\n", ok);
+//     OSSL_PARAM_free(out);
+//     return ok;
+
+// err:
+//     OPENSSL_free(sk);
+//     OSSL_PARAM_BLD_free(bld);
+//     return 0;
+// }
+
 static int km_dec_decode(void *vctx,
                          OSSL_CORE_BIO *cin,
                          int selection,
@@ -266,71 +357,149 @@ static int km_dec_decode(void *vctx,
                          OSSL_PASSPHRASE_CALLBACK *pw_cb, void *pw_cbarg)
 {
     (void)selection; (void)pw_cb; (void)pw_cbarg;
+
     KM_DEC_CTX *ctx = (KM_DEC_CTX*)vctx;
     KM_PROVCTX *prov = ctx ? ctx->provctx : NULL;
     if (!prov) return 0;
 
-    fprintf(stderr, "[decoder] called\n");
-    
-    /* 1) baca semua input */
+    fprintf(stderr, "[decoder] called with selection=0x%x\n", selection);
+
+    /* 1) read all */
     unsigned char *txt = NULL; size_t tlen = 0;
-    if (!read_all_core(prov, cin, &txt, &tlen)) return 0;
-    fprintf(stderr, "[read_all_core] end\n");
-    
-    /* 2) temukan blok PEM kita */
+    if (!read_all_core(prov, cin, &txt, &tlen)) {
+        fprintf(stderr, "[decoder] ERROR: read_all_core failed\n");
+        return 0;
+    }
+    fprintf(stderr, "[read_all_core] read %zu bytes\n", tlen);
+
+    /* 2) find our MLDSA PEM block */
     const char *alg = NULL;
     const unsigned char *b64p = NULL; size_t b64len = 0;
-    fprintf(stderr, "[find_pem_block] called\n");
+    fprintf(stderr, "[find_pem_block] searching for MLDSA PEM block\n");
     if (!find_pem_block(txt, tlen, &alg, &b64p, &b64len)) {
-        fprintf(stderr, "[decoder] no MLDSA PEM header found\n");
+        fprintf(stderr, "[decoder] ERROR: no MLDSA PEM header found\n");
         OPENSSL_free(txt);
         return 0;
     }
+    fprintf(stderr, "[decoder] found algorithm: %s\n", alg);
 
-    /* 3) bersihkan whitespace base64 di buffer temp lalu decode */
-    unsigned char *b64tmp = OPENSSL_malloc(b64len);
+    /* 3) base64 -> raw */
+    unsigned char *b64tmp = OPENSSL_malloc(b64len + 1);
     if (!b64tmp) { OPENSSL_free(txt); return 0; }
     memcpy(b64tmp, b64p, b64len);
+    b64tmp[b64len] = 0;
     strip_ws_inplace(b64tmp, &b64len);
 
     unsigned char *sk = NULL; size_t sklen = 0;
     int okb64 = b64_decode(b64tmp, b64len, &sk, &sklen);
-    fprintf(stderr, "[decoder] found alg=%s b64len=%zu\n", alg, b64len);
+    fprintf(stderr, "[decoder] b64 decode: ok=%d, sklen=%zu\n", okb64, sklen);
     OPENSSL_free(b64tmp);
     OPENSSL_free(txt);
-    if (!okb64) {
-        fprintf(stderr, "[decoder] base64 decode failed\n");
+    if (!okb64) return 0;
+
+    /* 4) sanity (opsional) */
+    size_t expected_privlen = 0;
+    if (strcmp(alg, "mldsa44") == 0) expected_privlen = 2560;
+    else if (strcmp(alg, "mldsa65") == 0) expected_privlen = 4032;
+    else if (strcmp(alg, "mldsa87") == 0) expected_privlen = 4896;
+
+    if (expected_privlen && sklen != expected_privlen) {
+        fprintf(stderr, "[decoder] WARNING: decoded length %zu != expected %zu for %s\n",
+                sklen, expected_privlen, alg);
+        if (sklen == expected_privlen + 2 && sk[sklen-1] == 0 && sk[sklen-2] == 0) {
+            sklen = expected_privlen;
+            fprintf(stderr, "[decoder] trimmed trailing 2 zero bytes -> %zu\n", sklen);
+        }
+    }
+
+    /* ==== 5) Siapkan objek key sementara untuk jalur LOAD ==== */
+    KM_SIG_KEY *tmp = OPENSSL_zalloc(sizeof(*tmp));
+    if (!tmp) { OPENSSL_clear_free(sk, sklen); return 0; }
+
+    /* Jika alg_name adalah ARRAY di KM_SIG_KEY */
+    OPENSSL_strlcpy(tmp->alg_name, alg, sizeof(tmp->alg_name));
+    /* Jika alg_name adalah char* (BUKAN array), ganti dua baris di atas dengan:
+     * tmp->alg_name = OPENSSL_strdup(alg);
+     * if (!tmp->alg_name) { OPENSSL_clear_free(sk, sklen); OPENSSL_free(tmp); return 0; }
+     */
+
+    /* Pindahkan priv ke tmp (ownership berpindah ke tmp) */
+    tmp->priv = sk;
+    tmp->privlen = sklen;
+    sk = NULL; sklen = 0;
+
+    /* ==== 6) Bangun OSSL_PARAM utk callback ==== */
+    OSSL_PARAM_BLD *bld = OSSL_PARAM_BLD_new();
+    if (!bld) {
+        OPENSSL_clear_free(tmp->priv, tmp->privlen);
+        OPENSSL_free(tmp->pub);
+        OPENSSL_free(tmp);
         return 0;
     }
-    fprintf(stderr, "[decoder] decoded sklen=%zu\n", sklen);
 
-    /* 4) kirim ke core -> KEYMGMT.import() */
-    OSSL_PARAM_BLD *bld = OSSL_PARAM_BLD_new();
-    if (!bld) { OPENSSL_free(sk); return 0; }
+    /* 6a) REFERENCE → memicu keymgmt_load() milik provider */
+    void *ref = tmp;
+    if (!OSSL_PARAM_BLD_push_octet_string(bld,
+            OSSL_OBJECT_PARAM_REFERENCE, &ref, sizeof(ref))) {
+        OSSL_PARAM_BLD_free(bld);
+        OPENSSL_clear_free(tmp->priv, tmp->privlen);
+        OPENSSL_free(tmp->pub);
+        OPENSSL_free(tmp);
+        return 0;
+    }
 
-    if (!OSSL_PARAM_BLD_push_utf8_string(bld, OSSL_OBJECT_PARAM_DATA_TYPE, alg, 0)) goto err;
-    if (!OSSL_PARAM_BLD_push_octet_string(bld, OSSL_PKEY_PARAM_PRIV_KEY, sk, sklen)) goto err;
+    /* 6b) Info tambahan (opsional tapi bagus ada) */
+    (void)OSSL_PARAM_BLD_push_utf8_string(bld, OSSL_OBJECT_PARAM_DATA_TYPE, alg, 0);
+    (void)OSSL_PARAM_BLD_push_utf8_string(bld, OSSL_OBJECT_PARAM_DATA_STRUCTURE, "type-specific", 0);
+
+    /* 6c) Hint fetch supaya kalau jatuh ke import, tetap ke provider kita */
+    (void)OSSL_PARAM_BLD_push_utf8_string(bld, OSSL_PKEY_PARAM_PROPERTIES, "provider=kookminlib", 0);
+
+    /* 6d) Kirim PRIV juga sebagai fallback jalur import */
+    (void)OSSL_PARAM_BLD_push_octet_string(bld, OSSL_PKEY_PARAM_PRIV_KEY, tmp->priv, tmp->privlen);
 
     OSSL_PARAM *out = OSSL_PARAM_BLD_to_param(bld);
-    OPENSSL_free(sk);
     OSSL_PARAM_BLD_free(bld);
-    if (!out) return 0;
+    if (!out) {
+        OPENSSL_clear_free(tmp->priv, tmp->privlen);
+        OPENSSL_free(tmp->pub);
+        OPENSSL_free(tmp);
+        return 0;
+    }
 
-    for (const OSSL_PARAM *pp = out; pp && pp->key; ++pp)
-    fprintf(stderr, "[decoder] out param: %s (data_type=%d size=%zu)\n",
-            pp->key, pp->data_type, pp->data_size);
+    /* debug */
+    fprintf(stderr, "[decoder] sending parameters to callback:\n");
+    for (const OSSL_PARAM *pp = out; pp && pp->key; ++pp) {
+        fprintf(stderr, "[decoder]   param: %s (type=%d size=%zu)\n",
+                pp->key, pp->data_type, pp->data_size);
+    }
 
+    /* 7) Call core → harusnya memicu keymgmt_load() */
+    int ok = cb(out, cbarg);
+    fprintf(stderr, "[decoder] callback returned: %d\n", ok);
 
-    int ok = cb(out, cbarg); /* ← ini harus 1 kalau KEYMGMT.import sukses */
-    fprintf(stderr, "[decoder] construct/import -> %d\n", ok);
     OSSL_PARAM_free(out);
-    return ok;
 
-err:
-    OPENSSL_free(sk);
-    OSSL_PARAM_BLD_free(bld);
-    return 0;
+    /* tmp seharusnya sudah di-deep-copy oleh keymgmt_load().
+       Bebaskan tmp lokal (material rahasia di-clear). */
+    OPENSSL_clear_free(tmp->priv, tmp->privlen);
+    OPENSSL_free(tmp->pub);
+    OPENSSL_free(tmp);
+    return ok;
 }
+
+
+// Also update the does_selection to be more specific
+static int km_dec_does_selection(void *vctx, int selection)
+{
+    /* accept apa saja yang menyangkut keypair/private/public */
+    const int ok = (selection & (OSSL_KEYMGMT_SELECT_KEYPAIR
+                               | OSSL_KEYMGMT_SELECT_PRIVATE_KEY
+                               | OSSL_KEYMGMT_SELECT_PUBLIC_KEY)) != 0;
+    fprintf(stderr, "[decoder] does_selection sel=0x%x -> %d\n", selection, ok);
+    return ok;
+}
+
 
 
 /* ---------- Dispatch table ---------- */

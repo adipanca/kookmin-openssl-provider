@@ -4,6 +4,7 @@
 #include <openssl/param_build.h>
 #include <openssl/core_names.h>
 #include <openssl/params.h>
+#include <openssl/crypto.h>  /* OPENSSL_strlcpy */
 
 /* --- map EVP name -> liboqs name --- */
 static const char *oqs_name_from_alg(const char *alg) {
@@ -51,13 +52,68 @@ static void km_sig_keymgmt_free(void *vkey) {
 }
 
 /* --- OPTIONAL tapi praktis: LOAD-by-reference --- */
-static void *km_sig_keymgmt_load(void *vprovctx, const void *reference, size_t ref_sz) {
-    fprintf(stderr, "[keymgmt_load] ref_sz=%zu\n", ref_sz);
-    if (!reference || ref_sz != sizeof(void*)) return NULL;
-    void *keyptr = NULL;
-    memcpy(&keyptr, reference, sizeof(void*));
-    fprintf(stderr, "[keymgmt_load] returning keyptr=%p\n", keyptr);
-    return keyptr;
+/* Tipe parameter yang didukung oleh LOAD */
+static const OSSL_PARAM *km_sig_keymgmt_load_types(void)
+{
+    /* Core akan mengecek ini untuk memutuskan bisa load atau tidak */
+    static const OSSL_PARAM loadp[] = {
+        OSSL_PARAM_octet_string(OSSL_OBJECT_PARAM_REFERENCE, NULL, 0),
+        OSSL_PARAM_utf8_string (OSSL_OBJECT_PARAM_DATA_TYPE, NULL, 0),
+        OSSL_PARAM_utf8_string (OSSL_OBJECT_PARAM_DATA_STRUCTURE, NULL, 0),
+        OSSL_PARAM_END
+    };
+    return loadp;
+}
+
+static int km_sig_keymgmt_load(void *vkey, const void *reference, size_t ref_sz)
+{
+    if (ref_sz != sizeof(void*)) return 0;
+
+    KM_SIG_KEY *dst = (KM_SIG_KEY*)vkey;
+    KM_SIG_KEY *src = NULL;
+    memcpy(&src, reference, sizeof(src));
+    if (!src) return 0;
+
+    if (!ensure_sig(dst)) return 0;
+
+    /* Bersihkan state lama */
+    OPENSSL_clear_free(dst->priv, dst->privlen);
+    dst->priv = NULL; dst->privlen = 0;
+    OPENSSL_free(dst->pub);
+    dst->pub = NULL; dst->publen = 0;
+
+    /* Copy nama algoritma:
+       - Jika alg_name adalah ARRAY: */
+    OPENSSL_strlcpy(dst->alg_name, src->alg_name, sizeof(dst->alg_name));
+    /* - Jika POINTER, gunakan ini sebagai gantinya:
+       OPENSSL_free(dst->alg_name);
+       dst->alg_name = OPENSSL_strdup(src->alg_name);
+       if (!dst->alg_name) return 0;
+    */
+
+    /* Deep-copy priv */
+    if (src->priv && src->privlen) {
+        dst->priv = OPENSSL_malloc(src->privlen);
+        if (!dst->priv) return 0;
+        memcpy(dst->priv, src->priv, src->privlen);
+        dst->privlen = src->privlen;
+    }
+
+    /* Deep-copy pub (jika ada; boleh kosong) */
+    if (src->pub && src->publen) {
+        dst->pub = OPENSSL_malloc(src->publen);
+        if (!dst->pub) {
+            OPENSSL_clear_free(dst->priv, dst->privlen);
+            dst->priv = NULL; dst->privlen = 0;
+            return 0;
+        }
+        memcpy(dst->pub, src->pub, src->publen);
+        dst->publen = src->publen;
+    }
+
+    fprintf(stderr, "[keymgmt_load] loaded key for %s (priv=%zu, pub=%zu)\n",
+            dst->alg_name, dst->privlen, dst->publen);
+    return 1;
 }
 
 
@@ -134,41 +190,15 @@ static int km_sig_keymgmt_get_params(void *vkey, OSSL_PARAM *params) {
 }
 
 /* --- IMPORT/EXPORT TYPES --- */
-// static const OSSL_PARAM *km_sig_keymgmt_import_types(int selector) {
-//     static const OSSL_PARAM pub_only[]  = { OSSL_PARAM_octet_string(OSSL_PKEY_PARAM_PUB_KEY,  NULL, 0), OSSL_PARAM_END };
-//     static const OSSL_PARAM priv_only[] = { OSSL_PARAM_octet_string(OSSL_PKEY_PARAM_PRIV_KEY, NULL, 0), OSSL_PARAM_END };
-//     static const OSSL_PARAM both[]      = {
-//         OSSL_PARAM_octet_string(OSSL_PKEY_PARAM_PRIV_KEY, NULL, 0),
-//         OSSL_PARAM_octet_string(OSSL_PKEY_PARAM_PUB_KEY,  NULL, 0),
-//         OSSL_PARAM_END
-//     };
-//     if (selector & OSSL_KEYMGMT_SELECT_KEYPAIR)      return both;
-//     if (selector & OSSL_KEYMGMT_SELECT_PRIVATE_KEY)  return priv_only;
-//     if (selector & OSSL_KEYMGMT_SELECT_PUBLIC_KEY)   return pub_only;
-//     return both;
-// }
-static const OSSL_PARAM *km_sig_keymgmt_import_types(int selector) {
-    static const OSSL_PARAM both_with_ref[] = {
+static const OSSL_PARAM *km_sig_keymgmt_import_types(int selector)
+{
+    (void)selector;
+    static const OSSL_PARAM keypair_params[] = {
         OSSL_PARAM_octet_string(OSSL_PKEY_PARAM_PRIV_KEY, NULL, 0),
         OSSL_PARAM_octet_string(OSSL_PKEY_PARAM_PUB_KEY,  NULL, 0),
-        OSSL_PARAM_octet_string(OSSL_OBJECT_PARAM_REFERENCE, NULL, 0),
         OSSL_PARAM_END
     };
-    static const OSSL_PARAM priv_with_ref[] = {
-        OSSL_PARAM_octet_string(OSSL_PKEY_PARAM_PRIV_KEY, NULL, 0),
-        OSSL_PARAM_octet_string(OSSL_OBJECT_PARAM_REFERENCE, NULL, 0),
-        OSSL_PARAM_END
-    };
-    static const OSSL_PARAM pub_with_ref[] = {
-        OSSL_PARAM_octet_string(OSSL_PKEY_PARAM_PUB_KEY,  NULL, 0),
-        OSSL_PARAM_octet_string(OSSL_OBJECT_PARAM_REFERENCE, NULL, 0),
-        OSSL_PARAM_END
-    };
-
-    if (selector & OSSL_KEYMGMT_SELECT_KEYPAIR)     return both_with_ref;
-    if (selector & OSSL_KEYMGMT_SELECT_PRIVATE_KEY) return priv_with_ref;
-    if (selector & OSSL_KEYMGMT_SELECT_PUBLIC_KEY)  return pub_with_ref;
-    return both_with_ref;
+    return keypair_params;
 }
 
 
@@ -203,43 +233,149 @@ static int get_octet_opt(const OSSL_PARAM params[], const char *key,
     return 1;
 }
 
+// Perbaikan untuk sig_keymgmt.c - khususnya fungsi import
+
 static int km_sig_keymgmt_import(void *vkey, int selector, const OSSL_PARAM params[])
 {
-    fprintf(stderr, "[keymgmt_import] selector=0x%x has_privparam=%d has_pubparam=%d\n",
-        selector,
-        OSSL_PARAM_locate_const(params, OSSL_PKEY_PARAM_PRIV_KEY)!=NULL,
-        OSSL_PARAM_locate_const(params, OSSL_PKEY_PARAM_PUB_KEY)!=NULL);
-
+    fprintf(stderr, "[keymgmt_import] selector=0x%x\n", selector);
+    
     KM_SIG_KEY *k = (KM_SIG_KEY*)vkey;
-    fprintf(stderr, "[km_sig_keymgmt_import] Called\n");
-    if (!ensure_sig(k)) return 0;
-    fprintf(stderr, "[km_sig_keymgmt_import] After ensure_sig\n");
+    if (!k) {
+        fprintf(stderr, "[keymgmt_import] ERROR: vkey is NULL\n");
+        return 0;
+    }
+    
+    fprintf(stderr, "[keymgmt_import] key alg_name=%s\n", k->alg_name);
+    
+    // Ensure OQS_SIG is initialized
+    if (!ensure_sig(k)) {
+        fprintf(stderr, "[keymgmt_import] ERROR: ensure_sig failed\n");
+        return 0;
+    }
+    
+    fprintf(stderr, "[keymgmt_import] sig initialized, length_secret_key=%zu\n", k->sig->length_secret_key);
 
-    unsigned char *p = NULL; size_t n = 0;
+    // Debug: print all available parameters
+    for (const OSSL_PARAM *p = params; p && p->key; p++) {
+        fprintf(stderr, "[keymgmt_import] param: %s (type=%d, size=%zu)\n", 
+                p->key, p->data_type, p->data_size);
+    }
 
-    /* PRIV (optional, tapi kalau ada kita simpan) */
-    if (!get_octet_opt(params, OSSL_PKEY_PARAM_PRIV_KEY, &p, &n)) return 0;
-    if (p && n) {
+    // Try to get private key
+    const OSSL_PARAM *priv_param = OSSL_PARAM_locate_const(params, OSSL_PKEY_PARAM_PRIV_KEY);
+    if (priv_param) {
+        fprintf(stderr, "[keymgmt_import] found PRIV_KEY param, size=%zu, expected=%zu\n", 
+                priv_param->data_size, k->sig->length_secret_key);
+        
+        // Validate size
+        if (priv_param->data_size != k->sig->length_secret_key) {
+            fprintf(stderr, "[keymgmt_import] ERROR: private key size mismatch\n");
+            return 0;
+        }
+        
+        // Allocate and copy private key
         OPENSSL_clear_free(k->priv, k->privlen);
-        k->priv = OPENSSL_malloc(n);
-        if (!k->priv) { OPENSSL_free(p); return 0; }
-        memcpy(k->priv, p, n); k->privlen = n;
-        OPENSSL_free(p);
+        k->priv = OPENSSL_malloc(priv_param->data_size);
+        if (!k->priv) {
+            fprintf(stderr, "[keymgmt_import] ERROR: malloc failed for private key\n");
+            return 0;
+        }
+        
+        memcpy(k->priv, priv_param->data, priv_param->data_size);
+        k->privlen = priv_param->data_size;
+        
+        fprintf(stderr, "[keymgmt_import] private key imported successfully\n");
+        
+        // For MLDSA, we can derive public key from private key if needed
+        if (!k->pub) {
+            k->publen = k->sig->length_public_key;
+            k->pub = OPENSSL_malloc(k->publen);
+            if (k->pub) {
+                // Extract public key from private key (MLDSA private key contains public key)
+                // This depends on liboqs implementation - you might need to adjust this
+                // For now, we'll leave public key derivation for later if needed
+                fprintf(stderr, "[keymgmt_import] public key derivation skipped\n");
+            }
+        }
+    } else {
+        fprintf(stderr, "[keymgmt_import] WARNING: no PRIV_KEY parameter found\n");
     }
 
-    /* PUB (optional) */
-    p = NULL; n = 0;
-    if (!get_octet_opt(params, OSSL_PKEY_PARAM_PUB_KEY, &p, &n)) return 0;
-    if (p && n) {
+    // Try to get public key (optional)
+    const OSSL_PARAM *pub_param = OSSL_PARAM_locate_const(params, OSSL_PKEY_PARAM_PUB_KEY);
+    if (pub_param) {
+        fprintf(stderr, "[keymgmt_import] found PUB_KEY param, size=%zu\n", pub_param->data_size);
+        
         OPENSSL_free(k->pub);
-        k->pub = OPENSSL_malloc(n);
-        if (!k->pub) { OPENSSL_free(p); return 0; }
-        memcpy(k->pub, p, n); k->publen = n;
-        OPENSSL_free(p);
+        k->pub = OPENSSL_malloc(pub_param->data_size);
+        if (k->pub) {
+            memcpy(k->pub, pub_param->data, pub_param->data_size);
+            k->publen = pub_param->data_size;
+            fprintf(stderr, "[keymgmt_import] public key imported successfully\n");
+        }
     }
 
-    return 1;  // <- sukses walau hanya dapat priv saja
+    // Check if we have at least what was requested
+    if ((selector & OSSL_KEYMGMT_SELECT_PRIVATE_KEY) && (!k->priv || !k->privlen)) {
+        fprintf(stderr, "[keymgmt_import] ERROR: private key requested but not available\n");
+        return 0;
+    }
+    
+    if ((selector & OSSL_KEYMGMT_SELECT_PUBLIC_KEY) && (!k->pub || !k->publen)) {
+        fprintf(stderr, "[keymgmt_import] WARNING: public key requested but not available\n");
+        // Don't fail here - we might be able to derive it later
+    }
+
+    fprintf(stderr, "[keymgmt_import] import successful\n");
+    return 1;
 }
+
+// Also make sure the decoder sends the right data type parameter
+// In dec_raw.c, make sure you're sending the algorithm name correctly:
+
+// In your decoder (dec_raw.c), change this line:
+// if (!OSSL_PARAM_BLD_push_utf8_string(bld, OSSL_OBJECT_PARAM_DATA_TYPE, alg, 0)) goto err;
+
+// Make sure the algorithm name matches exactly what keymgmt expects.
+// You might need to debug what exactly is being passed.
+
+// static int km_sig_keymgmt_import(void *vkey, int selector, const OSSL_PARAM params[])
+// {
+//     fprintf(stderr, "[keymgmt_import] selector=0x%x has_privparam=%d has_pubparam=%d\n",
+//         selector,
+//         OSSL_PARAM_locate_const(params, OSSL_PKEY_PARAM_PRIV_KEY)!=NULL,
+//         OSSL_PARAM_locate_const(params, OSSL_PKEY_PARAM_PUB_KEY)!=NULL);
+
+//     KM_SIG_KEY *k = (KM_SIG_KEY*)vkey;
+//     fprintf(stderr, "[km_sig_keymgmt_import] Called\n");
+//     if (!ensure_sig(k)) return 0;
+//     fprintf(stderr, "[km_sig_keymgmt_import] After ensure_sig\n");
+
+//     unsigned char *p = NULL; size_t n = 0;
+
+//     /* PRIV (optional, tapi kalau ada kita simpan) */
+//     if (!get_octet_opt(params, OSSL_PKEY_PARAM_PRIV_KEY, &p, &n)) return 0;
+//     if (p && n) {
+//         OPENSSL_clear_free(k->priv, k->privlen);
+//         k->priv = OPENSSL_malloc(n);
+//         if (!k->priv) { OPENSSL_free(p); return 0; }
+//         memcpy(k->priv, p, n); k->privlen = n;
+//         OPENSSL_free(p);
+//     }
+
+//     /* PUB (optional) */
+//     p = NULL; n = 0;
+//     if (!get_octet_opt(params, OSSL_PKEY_PARAM_PUB_KEY, &p, &n)) return 0;
+//     if (p && n) {
+//         OPENSSL_free(k->pub);
+//         k->pub = OPENSSL_malloc(n);
+//         if (!k->pub) { OPENSSL_free(p); return 0; }
+//         memcpy(k->pub, p, n); k->publen = n;
+//         OPENSSL_free(p);
+//     }
+
+//     return 1;  // <- sukses walau hanya dapat priv saja
+// }
 
 
 // static int km_sig_keymgmt_import(void *vkey, int selector, const OSSL_PARAM params[]) {
@@ -306,7 +442,7 @@ const OSSL_DISPATCH name[] = {                                                \
     { OSSL_FUNC_KEYMGMT_MATCH,                 (void(*)(void))km_sig_keymgmt_match },\
     { OSSL_FUNC_KEYMGMT_GETTABLE_PARAMS,       (void(*)(void))km_sig_keymgmt_gettable_params }, \
     { OSSL_FUNC_KEYMGMT_GET_PARAMS,            (void(*)(void))km_sig_keymgmt_get_params }, \
-    { OSSL_FUNC_KEYMGMT_LOAD, (void (*)(void))km_sig_keymgmt_load }, \
+    /* --- LOAD/LOAD_TYPES DIHAPUS --- */                                      \
     { OSSL_FUNC_KEYMGMT_IMPORT,                (void(*)(void))km_sig_keymgmt_import }, \
     { OSSL_FUNC_KEYMGMT_IMPORT_TYPES,          (void(*)(void))km_sig_keymgmt_import_types }, \
     { OSSL_FUNC_KEYMGMT_EXPORT,                (void(*)(void))km_sig_keymgmt_export }, \
@@ -317,6 +453,7 @@ const OSSL_DISPATCH name[] = {                                                \
     { OSSL_FUNC_KEYMGMT_QUERY_OPERATION_NAME,  (void(*)(void))queryop },      \
     { 0, NULL }                                                               \
 }
+
 
 KM_DISPATCH_TABLE(km_sig_keymgmt_fns_mldsa44, km_sig_keymgmt_new_mldsa44, km_sig_keymgmt_gen_mldsa44, km_sig_query_op_name_mldsa44);
 KM_DISPATCH_TABLE(km_sig_keymgmt_fns_mldsa65, km_sig_keymgmt_new_mldsa65, km_sig_keymgmt_gen_mldsa65, km_sig_query_op_name_mldsa65);
