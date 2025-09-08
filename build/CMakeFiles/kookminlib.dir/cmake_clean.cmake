@@ -1,8 +1,6 @@
 file(REMOVE_RECURSE
   "CMakeFiles/kookminlib.dir/src/bio.c.o"
   "CMakeFiles/kookminlib.dir/src/bio.c.o.d"
-  "CMakeFiles/kookminlib.dir/src/capabilities.c.o"
-  "CMakeFiles/kookminlib.dir/src/capabilities.c.o.d"
   "CMakeFiles/kookminlib.dir/src/encdec/decoder.c.o"
   "CMakeFiles/kookminlib.dir/src/encdec/decoder.c.o.d"
   "CMakeFiles/kookminlib.dir/src/encdec/encoder.c.o"
@@ -15,6 +13,8 @@ file(REMOVE_RECURSE
   "CMakeFiles/kookminlib.dir/src/keys.c.o.d"
   "CMakeFiles/kookminlib.dir/src/provider.c.o"
   "CMakeFiles/kookminlib.dir/src/provider.c.o.d"
+  "CMakeFiles/kookminlib.dir/src/readiness.c.o"
+  "CMakeFiles/kookminlib.dir/src/readiness.c.o.d"
   "CMakeFiles/kookminlib.dir/src/sig/sig.c.o"
   "CMakeFiles/kookminlib.dir/src/sig/sig.c.o.d"
   "kookminlib.pdb"

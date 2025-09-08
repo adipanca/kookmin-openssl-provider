@@ -1,1 +1,1 @@
-/opt/openssl-master/lib/ossl-modules/kookminlib.so
+/opt/openssl-master/lib64/ossl-modules/kookminlib.so

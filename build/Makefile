@@ -57,10 +57,10 @@ RM = /usr/bin/cmake -E rm -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/ubuntu/kookmin-openssl-provider
+CMAKE_SOURCE_DIR = /home/admin-vb/kookmin-openssl-provider
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/ubuntu/kookmin-openssl-provider/build
+CMAKE_BINARY_DIR = /home/admin-vb/kookmin-openssl-provider/build
 
 #=============================================================================
 # Targets provided globally by CMake.
@@ -132,9 +132,9 @@ install/strip/fast: preinstall/fast
 
 # The main all target
 all: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/ubuntu/kookmin-openssl-provider/build/CMakeFiles /home/ubuntu/kookmin-openssl-provider/build//CMakeFiles/progress.marks
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/admin-vb/kookmin-openssl-provider/build/CMakeFiles /home/admin-vb/kookmin-openssl-provider/build//CMakeFiles/progress.marks
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 all
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/ubuntu/kookmin-openssl-provider/build/CMakeFiles 0
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/admin-vb/kookmin-openssl-provider/build/CMakeFiles 0
 .PHONY : all
 
 # The main clean target
@@ -197,30 +197,6 @@ src/bio.s: src/bio.c.s
 src/bio.c.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/kookminlib.dir/build.make CMakeFiles/kookminlib.dir/src/bio.c.s
 .PHONY : src/bio.c.s
-
-src/capabilities.o: src/capabilities.c.o
-.PHONY : src/capabilities.o
-
-# target to build an object file
-src/capabilities.c.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/kookminlib.dir/build.make CMakeFiles/kookminlib.dir/src/capabilities.c.o
-.PHONY : src/capabilities.c.o
-
-src/capabilities.i: src/capabilities.c.i
-.PHONY : src/capabilities.i
-
-# target to preprocess a source file
-src/capabilities.c.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/kookminlib.dir/build.make CMakeFiles/kookminlib.dir/src/capabilities.c.i
-.PHONY : src/capabilities.c.i
-
-src/capabilities.s: src/capabilities.c.s
-.PHONY : src/capabilities.s
-
-# target to generate assembly for a file
-src/capabilities.c.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/kookminlib.dir/build.make CMakeFiles/kookminlib.dir/src/capabilities.c.s
-.PHONY : src/capabilities.c.s
 
 src/encdec/decoder.o: src/encdec/decoder.c.o
 .PHONY : src/encdec/decoder.o
@@ -366,6 +342,30 @@ src/provider.c.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/kookminlib.dir/build.make CMakeFiles/kookminlib.dir/src/provider.c.s
 .PHONY : src/provider.c.s
 
+src/readiness.o: src/readiness.c.o
+.PHONY : src/readiness.o
+
+# target to build an object file
+src/readiness.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kookminlib.dir/build.make CMakeFiles/kookminlib.dir/src/readiness.c.o
+.PHONY : src/readiness.c.o
+
+src/readiness.i: src/readiness.c.i
+.PHONY : src/readiness.i
+
+# target to preprocess a source file
+src/readiness.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kookminlib.dir/build.make CMakeFiles/kookminlib.dir/src/readiness.c.i
+.PHONY : src/readiness.c.i
+
+src/readiness.s: src/readiness.c.s
+.PHONY : src/readiness.s
+
+# target to generate assembly for a file
+src/readiness.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kookminlib.dir/build.make CMakeFiles/kookminlib.dir/src/readiness.c.s
+.PHONY : src/readiness.c.s
+
 src/sig/sig.o: src/sig/sig.c.o
 .PHONY : src/sig/sig.o
 
@@ -406,9 +406,6 @@ help:
 	@echo "... src/bio.o"
 	@echo "... src/bio.i"
 	@echo "... src/bio.s"
-	@echo "... src/capabilities.o"
-	@echo "... src/capabilities.i"
-	@echo "... src/capabilities.s"
 	@echo "... src/encdec/decoder.o"
 	@echo "... src/encdec/decoder.i"
 	@echo "... src/encdec/decoder.s"
@@ -427,6 +424,9 @@ help:
 	@echo "... src/provider.o"
 	@echo "... src/provider.i"
 	@echo "... src/provider.s"
+	@echo "... src/readiness.o"
+	@echo "... src/readiness.i"
+	@echo "... src/readiness.s"
 	@echo "... src/sig/sig.o"
 	@echo "... src/sig/sig.i"
 	@echo "... src/sig/sig.s"

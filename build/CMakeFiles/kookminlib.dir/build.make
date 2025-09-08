@@ -53,10 +53,10 @@ RM = /usr/bin/cmake -E rm -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/ubuntu/kookmin-openssl-provider
+CMAKE_SOURCE_DIR = /home/admin-vb/kookmin-openssl-provider
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/ubuntu/kookmin-openssl-provider/build
+CMAKE_BINARY_DIR = /home/admin-vb/kookmin-openssl-provider/build
 
 # Include any dependencies generated for this target.
 include CMakeFiles/kookminlib.dir/depend.make
@@ -70,137 +70,137 @@ include CMakeFiles/kookminlib.dir/progress.make
 include CMakeFiles/kookminlib.dir/flags.make
 
 CMakeFiles/kookminlib.dir/src/bio.c.o: CMakeFiles/kookminlib.dir/flags.make
-CMakeFiles/kookminlib.dir/src/bio.c.o: /home/ubuntu/kookmin-openssl-provider/src/bio.c
+CMakeFiles/kookminlib.dir/src/bio.c.o: /home/admin-vb/kookmin-openssl-provider/src/bio.c
 CMakeFiles/kookminlib.dir/src/bio.c.o: CMakeFiles/kookminlib.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/ubuntu/kookmin-openssl-provider/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building C object CMakeFiles/kookminlib.dir/src/bio.c.o"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/kookminlib.dir/src/bio.c.o -MF CMakeFiles/kookminlib.dir/src/bio.c.o.d -o CMakeFiles/kookminlib.dir/src/bio.c.o -c /home/ubuntu/kookmin-openssl-provider/src/bio.c
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/admin-vb/kookmin-openssl-provider/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building C object CMakeFiles/kookminlib.dir/src/bio.c.o"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/kookminlib.dir/src/bio.c.o -MF CMakeFiles/kookminlib.dir/src/bio.c.o.d -o CMakeFiles/kookminlib.dir/src/bio.c.o -c /home/admin-vb/kookmin-openssl-provider/src/bio.c
 
 CMakeFiles/kookminlib.dir/src/bio.c.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing C source to CMakeFiles/kookminlib.dir/src/bio.c.i"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/ubuntu/kookmin-openssl-provider/src/bio.c > CMakeFiles/kookminlib.dir/src/bio.c.i
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/admin-vb/kookmin-openssl-provider/src/bio.c > CMakeFiles/kookminlib.dir/src/bio.c.i
 
 CMakeFiles/kookminlib.dir/src/bio.c.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/kookminlib.dir/src/bio.c.s"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/ubuntu/kookmin-openssl-provider/src/bio.c -o CMakeFiles/kookminlib.dir/src/bio.c.s
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/admin-vb/kookmin-openssl-provider/src/bio.c -o CMakeFiles/kookminlib.dir/src/bio.c.s
 
 CMakeFiles/kookminlib.dir/src/kem/kem.c.o: CMakeFiles/kookminlib.dir/flags.make
-CMakeFiles/kookminlib.dir/src/kem/kem.c.o: /home/ubuntu/kookmin-openssl-provider/src/kem/kem.c
+CMakeFiles/kookminlib.dir/src/kem/kem.c.o: /home/admin-vb/kookmin-openssl-provider/src/kem/kem.c
 CMakeFiles/kookminlib.dir/src/kem/kem.c.o: CMakeFiles/kookminlib.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/ubuntu/kookmin-openssl-provider/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building C object CMakeFiles/kookminlib.dir/src/kem/kem.c.o"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/kookminlib.dir/src/kem/kem.c.o -MF CMakeFiles/kookminlib.dir/src/kem/kem.c.o.d -o CMakeFiles/kookminlib.dir/src/kem/kem.c.o -c /home/ubuntu/kookmin-openssl-provider/src/kem/kem.c
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/admin-vb/kookmin-openssl-provider/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building C object CMakeFiles/kookminlib.dir/src/kem/kem.c.o"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/kookminlib.dir/src/kem/kem.c.o -MF CMakeFiles/kookminlib.dir/src/kem/kem.c.o.d -o CMakeFiles/kookminlib.dir/src/kem/kem.c.o -c /home/admin-vb/kookmin-openssl-provider/src/kem/kem.c
 
 CMakeFiles/kookminlib.dir/src/kem/kem.c.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing C source to CMakeFiles/kookminlib.dir/src/kem/kem.c.i"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/ubuntu/kookmin-openssl-provider/src/kem/kem.c > CMakeFiles/kookminlib.dir/src/kem/kem.c.i
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/admin-vb/kookmin-openssl-provider/src/kem/kem.c > CMakeFiles/kookminlib.dir/src/kem/kem.c.i
 
 CMakeFiles/kookminlib.dir/src/kem/kem.c.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/kookminlib.dir/src/kem/kem.c.s"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/ubuntu/kookmin-openssl-provider/src/kem/kem.c -o CMakeFiles/kookminlib.dir/src/kem/kem.c.s
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/admin-vb/kookmin-openssl-provider/src/kem/kem.c -o CMakeFiles/kookminlib.dir/src/kem/kem.c.s
 
 CMakeFiles/kookminlib.dir/src/keys.c.o: CMakeFiles/kookminlib.dir/flags.make
-CMakeFiles/kookminlib.dir/src/keys.c.o: /home/ubuntu/kookmin-openssl-provider/src/keys.c
+CMakeFiles/kookminlib.dir/src/keys.c.o: /home/admin-vb/kookmin-openssl-provider/src/keys.c
 CMakeFiles/kookminlib.dir/src/keys.c.o: CMakeFiles/kookminlib.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/ubuntu/kookmin-openssl-provider/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building C object CMakeFiles/kookminlib.dir/src/keys.c.o"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/kookminlib.dir/src/keys.c.o -MF CMakeFiles/kookminlib.dir/src/keys.c.o.d -o CMakeFiles/kookminlib.dir/src/keys.c.o -c /home/ubuntu/kookmin-openssl-provider/src/keys.c
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/admin-vb/kookmin-openssl-provider/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building C object CMakeFiles/kookminlib.dir/src/keys.c.o"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/kookminlib.dir/src/keys.c.o -MF CMakeFiles/kookminlib.dir/src/keys.c.o.d -o CMakeFiles/kookminlib.dir/src/keys.c.o -c /home/admin-vb/kookmin-openssl-provider/src/keys.c
 
 CMakeFiles/kookminlib.dir/src/keys.c.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing C source to CMakeFiles/kookminlib.dir/src/keys.c.i"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/ubuntu/kookmin-openssl-provider/src/keys.c > CMakeFiles/kookminlib.dir/src/keys.c.i
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/admin-vb/kookmin-openssl-provider/src/keys.c > CMakeFiles/kookminlib.dir/src/keys.c.i
 
 CMakeFiles/kookminlib.dir/src/keys.c.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/kookminlib.dir/src/keys.c.s"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/ubuntu/kookmin-openssl-provider/src/keys.c -o CMakeFiles/kookminlib.dir/src/keys.c.s
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/admin-vb/kookmin-openssl-provider/src/keys.c -o CMakeFiles/kookminlib.dir/src/keys.c.s
 
-CMakeFiles/kookminlib.dir/src/capabilities.c.o: CMakeFiles/kookminlib.dir/flags.make
-CMakeFiles/kookminlib.dir/src/capabilities.c.o: /home/ubuntu/kookmin-openssl-provider/src/capabilities.c
-CMakeFiles/kookminlib.dir/src/capabilities.c.o: CMakeFiles/kookminlib.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/ubuntu/kookmin-openssl-provider/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building C object CMakeFiles/kookminlib.dir/src/capabilities.c.o"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/kookminlib.dir/src/capabilities.c.o -MF CMakeFiles/kookminlib.dir/src/capabilities.c.o.d -o CMakeFiles/kookminlib.dir/src/capabilities.c.o -c /home/ubuntu/kookmin-openssl-provider/src/capabilities.c
+CMakeFiles/kookminlib.dir/src/readiness.c.o: CMakeFiles/kookminlib.dir/flags.make
+CMakeFiles/kookminlib.dir/src/readiness.c.o: /home/admin-vb/kookmin-openssl-provider/src/readiness.c
+CMakeFiles/kookminlib.dir/src/readiness.c.o: CMakeFiles/kookminlib.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/admin-vb/kookmin-openssl-provider/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building C object CMakeFiles/kookminlib.dir/src/readiness.c.o"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/kookminlib.dir/src/readiness.c.o -MF CMakeFiles/kookminlib.dir/src/readiness.c.o.d -o CMakeFiles/kookminlib.dir/src/readiness.c.o -c /home/admin-vb/kookmin-openssl-provider/src/readiness.c
 
-CMakeFiles/kookminlib.dir/src/capabilities.c.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing C source to CMakeFiles/kookminlib.dir/src/capabilities.c.i"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/ubuntu/kookmin-openssl-provider/src/capabilities.c > CMakeFiles/kookminlib.dir/src/capabilities.c.i
+CMakeFiles/kookminlib.dir/src/readiness.c.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing C source to CMakeFiles/kookminlib.dir/src/readiness.c.i"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/admin-vb/kookmin-openssl-provider/src/readiness.c > CMakeFiles/kookminlib.dir/src/readiness.c.i
 
-CMakeFiles/kookminlib.dir/src/capabilities.c.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/kookminlib.dir/src/capabilities.c.s"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/ubuntu/kookmin-openssl-provider/src/capabilities.c -o CMakeFiles/kookminlib.dir/src/capabilities.c.s
+CMakeFiles/kookminlib.dir/src/readiness.c.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/kookminlib.dir/src/readiness.c.s"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/admin-vb/kookmin-openssl-provider/src/readiness.c -o CMakeFiles/kookminlib.dir/src/readiness.c.s
 
 CMakeFiles/kookminlib.dir/src/keymgmt.c.o: CMakeFiles/kookminlib.dir/flags.make
-CMakeFiles/kookminlib.dir/src/keymgmt.c.o: /home/ubuntu/kookmin-openssl-provider/src/keymgmt.c
+CMakeFiles/kookminlib.dir/src/keymgmt.c.o: /home/admin-vb/kookmin-openssl-provider/src/keymgmt.c
 CMakeFiles/kookminlib.dir/src/keymgmt.c.o: CMakeFiles/kookminlib.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/ubuntu/kookmin-openssl-provider/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building C object CMakeFiles/kookminlib.dir/src/keymgmt.c.o"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/kookminlib.dir/src/keymgmt.c.o -MF CMakeFiles/kookminlib.dir/src/keymgmt.c.o.d -o CMakeFiles/kookminlib.dir/src/keymgmt.c.o -c /home/ubuntu/kookmin-openssl-provider/src/keymgmt.c
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/admin-vb/kookmin-openssl-provider/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building C object CMakeFiles/kookminlib.dir/src/keymgmt.c.o"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/kookminlib.dir/src/keymgmt.c.o -MF CMakeFiles/kookminlib.dir/src/keymgmt.c.o.d -o CMakeFiles/kookminlib.dir/src/keymgmt.c.o -c /home/admin-vb/kookmin-openssl-provider/src/keymgmt.c
 
 CMakeFiles/kookminlib.dir/src/keymgmt.c.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing C source to CMakeFiles/kookminlib.dir/src/keymgmt.c.i"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/ubuntu/kookmin-openssl-provider/src/keymgmt.c > CMakeFiles/kookminlib.dir/src/keymgmt.c.i
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/admin-vb/kookmin-openssl-provider/src/keymgmt.c > CMakeFiles/kookminlib.dir/src/keymgmt.c.i
 
 CMakeFiles/kookminlib.dir/src/keymgmt.c.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/kookminlib.dir/src/keymgmt.c.s"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/ubuntu/kookmin-openssl-provider/src/keymgmt.c -o CMakeFiles/kookminlib.dir/src/keymgmt.c.s
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/admin-vb/kookmin-openssl-provider/src/keymgmt.c -o CMakeFiles/kookminlib.dir/src/keymgmt.c.s
 
 CMakeFiles/kookminlib.dir/src/provider.c.o: CMakeFiles/kookminlib.dir/flags.make
-CMakeFiles/kookminlib.dir/src/provider.c.o: /home/ubuntu/kookmin-openssl-provider/src/provider.c
+CMakeFiles/kookminlib.dir/src/provider.c.o: /home/admin-vb/kookmin-openssl-provider/src/provider.c
 CMakeFiles/kookminlib.dir/src/provider.c.o: CMakeFiles/kookminlib.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/ubuntu/kookmin-openssl-provider/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Building C object CMakeFiles/kookminlib.dir/src/provider.c.o"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/kookminlib.dir/src/provider.c.o -MF CMakeFiles/kookminlib.dir/src/provider.c.o.d -o CMakeFiles/kookminlib.dir/src/provider.c.o -c /home/ubuntu/kookmin-openssl-provider/src/provider.c
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/admin-vb/kookmin-openssl-provider/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Building C object CMakeFiles/kookminlib.dir/src/provider.c.o"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/kookminlib.dir/src/provider.c.o -MF CMakeFiles/kookminlib.dir/src/provider.c.o.d -o CMakeFiles/kookminlib.dir/src/provider.c.o -c /home/admin-vb/kookmin-openssl-provider/src/provider.c
 
 CMakeFiles/kookminlib.dir/src/provider.c.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing C source to CMakeFiles/kookminlib.dir/src/provider.c.i"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/ubuntu/kookmin-openssl-provider/src/provider.c > CMakeFiles/kookminlib.dir/src/provider.c.i
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/admin-vb/kookmin-openssl-provider/src/provider.c > CMakeFiles/kookminlib.dir/src/provider.c.i
 
 CMakeFiles/kookminlib.dir/src/provider.c.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/kookminlib.dir/src/provider.c.s"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/ubuntu/kookmin-openssl-provider/src/provider.c -o CMakeFiles/kookminlib.dir/src/provider.c.s
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/admin-vb/kookmin-openssl-provider/src/provider.c -o CMakeFiles/kookminlib.dir/src/provider.c.s
 
 CMakeFiles/kookminlib.dir/src/encdec/encoder.c.o: CMakeFiles/kookminlib.dir/flags.make
-CMakeFiles/kookminlib.dir/src/encdec/encoder.c.o: /home/ubuntu/kookmin-openssl-provider/src/encdec/encoder.c
+CMakeFiles/kookminlib.dir/src/encdec/encoder.c.o: /home/admin-vb/kookmin-openssl-provider/src/encdec/encoder.c
 CMakeFiles/kookminlib.dir/src/encdec/encoder.c.o: CMakeFiles/kookminlib.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/ubuntu/kookmin-openssl-provider/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_7) "Building C object CMakeFiles/kookminlib.dir/src/encdec/encoder.c.o"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/kookminlib.dir/src/encdec/encoder.c.o -MF CMakeFiles/kookminlib.dir/src/encdec/encoder.c.o.d -o CMakeFiles/kookminlib.dir/src/encdec/encoder.c.o -c /home/ubuntu/kookmin-openssl-provider/src/encdec/encoder.c
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/admin-vb/kookmin-openssl-provider/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_7) "Building C object CMakeFiles/kookminlib.dir/src/encdec/encoder.c.o"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/kookminlib.dir/src/encdec/encoder.c.o -MF CMakeFiles/kookminlib.dir/src/encdec/encoder.c.o.d -o CMakeFiles/kookminlib.dir/src/encdec/encoder.c.o -c /home/admin-vb/kookmin-openssl-provider/src/encdec/encoder.c
 
 CMakeFiles/kookminlib.dir/src/encdec/encoder.c.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing C source to CMakeFiles/kookminlib.dir/src/encdec/encoder.c.i"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/ubuntu/kookmin-openssl-provider/src/encdec/encoder.c > CMakeFiles/kookminlib.dir/src/encdec/encoder.c.i
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/admin-vb/kookmin-openssl-provider/src/encdec/encoder.c > CMakeFiles/kookminlib.dir/src/encdec/encoder.c.i
 
 CMakeFiles/kookminlib.dir/src/encdec/encoder.c.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/kookminlib.dir/src/encdec/encoder.c.s"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/ubuntu/kookmin-openssl-provider/src/encdec/encoder.c -o CMakeFiles/kookminlib.dir/src/encdec/encoder.c.s
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/admin-vb/kookmin-openssl-provider/src/encdec/encoder.c -o CMakeFiles/kookminlib.dir/src/encdec/encoder.c.s
 
 CMakeFiles/kookminlib.dir/src/encdec/decoder.c.o: CMakeFiles/kookminlib.dir/flags.make
-CMakeFiles/kookminlib.dir/src/encdec/decoder.c.o: /home/ubuntu/kookmin-openssl-provider/src/encdec/decoder.c
+CMakeFiles/kookminlib.dir/src/encdec/decoder.c.o: /home/admin-vb/kookmin-openssl-provider/src/encdec/decoder.c
 CMakeFiles/kookminlib.dir/src/encdec/decoder.c.o: CMakeFiles/kookminlib.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/ubuntu/kookmin-openssl-provider/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_8) "Building C object CMakeFiles/kookminlib.dir/src/encdec/decoder.c.o"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/kookminlib.dir/src/encdec/decoder.c.o -MF CMakeFiles/kookminlib.dir/src/encdec/decoder.c.o.d -o CMakeFiles/kookminlib.dir/src/encdec/decoder.c.o -c /home/ubuntu/kookmin-openssl-provider/src/encdec/decoder.c
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/admin-vb/kookmin-openssl-provider/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_8) "Building C object CMakeFiles/kookminlib.dir/src/encdec/decoder.c.o"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/kookminlib.dir/src/encdec/decoder.c.o -MF CMakeFiles/kookminlib.dir/src/encdec/decoder.c.o.d -o CMakeFiles/kookminlib.dir/src/encdec/decoder.c.o -c /home/admin-vb/kookmin-openssl-provider/src/encdec/decoder.c
 
 CMakeFiles/kookminlib.dir/src/encdec/decoder.c.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing C source to CMakeFiles/kookminlib.dir/src/encdec/decoder.c.i"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/ubuntu/kookmin-openssl-provider/src/encdec/decoder.c > CMakeFiles/kookminlib.dir/src/encdec/decoder.c.i
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/admin-vb/kookmin-openssl-provider/src/encdec/decoder.c > CMakeFiles/kookminlib.dir/src/encdec/decoder.c.i
 
 CMakeFiles/kookminlib.dir/src/encdec/decoder.c.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/kookminlib.dir/src/encdec/decoder.c.s"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/ubuntu/kookmin-openssl-provider/src/encdec/decoder.c -o CMakeFiles/kookminlib.dir/src/encdec/decoder.c.s
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/admin-vb/kookmin-openssl-provider/src/encdec/decoder.c -o CMakeFiles/kookminlib.dir/src/encdec/decoder.c.s
 
 CMakeFiles/kookminlib.dir/src/sig/sig.c.o: CMakeFiles/kookminlib.dir/flags.make
-CMakeFiles/kookminlib.dir/src/sig/sig.c.o: /home/ubuntu/kookmin-openssl-provider/src/sig/sig.c
+CMakeFiles/kookminlib.dir/src/sig/sig.c.o: /home/admin-vb/kookmin-openssl-provider/src/sig/sig.c
 CMakeFiles/kookminlib.dir/src/sig/sig.c.o: CMakeFiles/kookminlib.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/ubuntu/kookmin-openssl-provider/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_9) "Building C object CMakeFiles/kookminlib.dir/src/sig/sig.c.o"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/kookminlib.dir/src/sig/sig.c.o -MF CMakeFiles/kookminlib.dir/src/sig/sig.c.o.d -o CMakeFiles/kookminlib.dir/src/sig/sig.c.o -c /home/ubuntu/kookmin-openssl-provider/src/sig/sig.c
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/admin-vb/kookmin-openssl-provider/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_9) "Building C object CMakeFiles/kookminlib.dir/src/sig/sig.c.o"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/kookminlib.dir/src/sig/sig.c.o -MF CMakeFiles/kookminlib.dir/src/sig/sig.c.o.d -o CMakeFiles/kookminlib.dir/src/sig/sig.c.o -c /home/admin-vb/kookmin-openssl-provider/src/sig/sig.c
 
 CMakeFiles/kookminlib.dir/src/sig/sig.c.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing C source to CMakeFiles/kookminlib.dir/src/sig/sig.c.i"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/ubuntu/kookmin-openssl-provider/src/sig/sig.c > CMakeFiles/kookminlib.dir/src/sig/sig.c.i
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/admin-vb/kookmin-openssl-provider/src/sig/sig.c > CMakeFiles/kookminlib.dir/src/sig/sig.c.i
 
 CMakeFiles/kookminlib.dir/src/sig/sig.c.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/kookminlib.dir/src/sig/sig.c.s"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/ubuntu/kookmin-openssl-provider/src/sig/sig.c -o CMakeFiles/kookminlib.dir/src/sig/sig.c.s
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/admin-vb/kookmin-openssl-provider/src/sig/sig.c -o CMakeFiles/kookminlib.dir/src/sig/sig.c.s
 
 # Object files for target kookminlib
 kookminlib_OBJECTS = \
 "CMakeFiles/kookminlib.dir/src/bio.c.o" \
 "CMakeFiles/kookminlib.dir/src/kem/kem.c.o" \
 "CMakeFiles/kookminlib.dir/src/keys.c.o" \
-"CMakeFiles/kookminlib.dir/src/capabilities.c.o" \
+"CMakeFiles/kookminlib.dir/src/readiness.c.o" \
 "CMakeFiles/kookminlib.dir/src/keymgmt.c.o" \
 "CMakeFiles/kookminlib.dir/src/provider.c.o" \
 "CMakeFiles/kookminlib.dir/src/encdec/encoder.c.o" \
@@ -213,17 +213,17 @@ kookminlib_EXTERNAL_OBJECTS =
 kookminlib.so: CMakeFiles/kookminlib.dir/src/bio.c.o
 kookminlib.so: CMakeFiles/kookminlib.dir/src/kem/kem.c.o
 kookminlib.so: CMakeFiles/kookminlib.dir/src/keys.c.o
-kookminlib.so: CMakeFiles/kookminlib.dir/src/capabilities.c.o
+kookminlib.so: CMakeFiles/kookminlib.dir/src/readiness.c.o
 kookminlib.so: CMakeFiles/kookminlib.dir/src/keymgmt.c.o
 kookminlib.so: CMakeFiles/kookminlib.dir/src/provider.c.o
 kookminlib.so: CMakeFiles/kookminlib.dir/src/encdec/encoder.c.o
 kookminlib.so: CMakeFiles/kookminlib.dir/src/encdec/decoder.c.o
 kookminlib.so: CMakeFiles/kookminlib.dir/src/sig/sig.c.o
 kookminlib.so: CMakeFiles/kookminlib.dir/build.make
-kookminlib.so: /opt/openssl-master/lib/libcrypto.so
+kookminlib.so: /opt/openssl-master/lib64/libcrypto.so
 kookminlib.so: /opt/liboqs/lib/liboqs.so
 kookminlib.so: CMakeFiles/kookminlib.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/ubuntu/kookmin-openssl-provider/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_10) "Linking C shared module kookminlib.so"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/admin-vb/kookmin-openssl-provider/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_10) "Linking C shared module kookminlib.so"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/kookminlib.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.
@@ -235,6 +235,6 @@ CMakeFiles/kookminlib.dir/clean:
 .PHONY : CMakeFiles/kookminlib.dir/clean
 
 CMakeFiles/kookminlib.dir/depend:
-	cd /home/ubuntu/kookmin-openssl-provider/build && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/ubuntu/kookmin-openssl-provider /home/ubuntu/kookmin-openssl-provider /home/ubuntu/kookmin-openssl-provider/build /home/ubuntu/kookmin-openssl-provider/build /home/ubuntu/kookmin-openssl-provider/build/CMakeFiles/kookminlib.dir/DependInfo.cmake "--color=$(COLOR)"
+	cd /home/admin-vb/kookmin-openssl-provider/build && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/admin-vb/kookmin-openssl-provider /home/admin-vb/kookmin-openssl-provider /home/admin-vb/kookmin-openssl-provider/build /home/admin-vb/kookmin-openssl-provider/build /home/admin-vb/kookmin-openssl-provider/build/CMakeFiles/kookminlib.dir/DependInfo.cmake "--color=$(COLOR)"
 .PHONY : CMakeFiles/kookminlib.dir/depend
 

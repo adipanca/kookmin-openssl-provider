@@ -260,7 +260,7 @@ extern const OSSL_DISPATCH km_hybrid_kem_functions[];
 extern const OSSL_DISPATCH km_signature_functions[];
 
 ///// KM_TEMPLATE_FRAGMENT_ENDECODER_FUNCTIONS_START
-#ifdef KM_KEM_ENCODERS
+// #ifdef KM_KEM_ENCODERS
 extern const OSSL_DISPATCH
     km_kyber512_to_PrivateKeyInfo_der_encoder_functions[];
 extern const OSSL_DISPATCH
@@ -280,6 +280,24 @@ extern const OSSL_DISPATCH
     km_SubjectPublicKeyInfo_der_to_kyber512_decoder_functions[];
 
 extern const OSSL_DISPATCH
+    km_x25519_kyber512_to_PrivateKeyInfo_der_encoder_functions[];
+extern const OSSL_DISPATCH
+    km_x25519_kyber512_to_PrivateKeyInfo_pem_encoder_functions[];
+extern const OSSL_DISPATCH
+    km_x25519_kyber512_to_EncryptedPrivateKeyInfo_der_encoder_functions[];
+extern const OSSL_DISPATCH
+    km_x25519_kyber512_to_EncryptedPrivateKeyInfo_pem_encoder_functions[];
+extern const OSSL_DISPATCH
+    km_x25519_kyber512_to_SubjectPublicKeyInfo_der_encoder_functions[];
+extern const OSSL_DISPATCH
+    km_x25519_kyber512_to_SubjectPublicKeyInfo_pem_encoder_functions[];
+extern const OSSL_DISPATCH km_x25519_kyber512_to_text_encoder_functions[];
+extern const OSSL_DISPATCH
+    km_PrivateKeyInfo_der_to_x25519_kyber512_decoder_functions[];
+extern const OSSL_DISPATCH
+    km_SubjectPublicKeyInfo_der_to_x25519_kyber512_decoder_functions[];
+
+extern const OSSL_DISPATCH
     km_kyber768_to_PrivateKeyInfo_der_encoder_functions[];
 extern const OSSL_DISPATCH
     km_kyber768_to_PrivateKeyInfo_pem_encoder_functions[];
@@ -296,6 +314,24 @@ extern const OSSL_DISPATCH
     km_PrivateKeyInfo_der_to_kyber768_decoder_functions[];
 extern const OSSL_DISPATCH
     km_SubjectPublicKeyInfo_der_to_kyber768_decoder_functions[];
+
+extern const OSSL_DISPATCH
+    km_x25519_kyber768_to_PrivateKeyInfo_der_encoder_functions[];
+extern const OSSL_DISPATCH
+    km_x25519_kyber768_to_PrivateKeyInfo_pem_encoder_functions[];
+extern const OSSL_DISPATCH
+    km_x25519_kyber768_to_EncryptedPrivateKeyInfo_der_encoder_functions[];
+extern const OSSL_DISPATCH
+    km_x25519_kyber768_to_EncryptedPrivateKeyInfo_pem_encoder_functions[];
+extern const OSSL_DISPATCH
+    km_x25519_kyber768_to_SubjectPublicKeyInfo_der_encoder_functions[];
+extern const OSSL_DISPATCH
+    km_x25519_kyber768_to_SubjectPublicKeyInfo_pem_encoder_functions[];
+extern const OSSL_DISPATCH km_x25519_kyber768_to_text_encoder_functions[];
+extern const OSSL_DISPATCH
+    km_PrivateKeyInfo_der_to_x25519_kyber768_decoder_functions[];
+extern const OSSL_DISPATCH
+    km_SubjectPublicKeyInfo_der_to_x25519_kyber768_decoder_functions[];
 
 extern const OSSL_DISPATCH
     km_kyber1024_to_PrivateKeyInfo_der_encoder_functions[];
@@ -334,6 +370,24 @@ extern const OSSL_DISPATCH
     km_SubjectPublicKeyInfo_der_to_mlkem512_decoder_functions[];
 
 extern const OSSL_DISPATCH
+    km_x25519_mlkem512_to_PrivateKeyInfo_der_encoder_functions[];
+extern const OSSL_DISPATCH
+    km_x25519_mlkem512_to_PrivateKeyInfo_pem_encoder_functions[];
+extern const OSSL_DISPATCH
+    km_x25519_mlkem512_to_EncryptedPrivateKeyInfo_der_encoder_functions[];
+extern const OSSL_DISPATCH
+    km_x25519_mlkem512_to_EncryptedPrivateKeyInfo_pem_encoder_functions[];
+extern const OSSL_DISPATCH
+    km_x25519_mlkem512_to_SubjectPublicKeyInfo_der_encoder_functions[];
+extern const OSSL_DISPATCH
+    km_x25519_mlkem512_to_SubjectPublicKeyInfo_pem_encoder_functions[];
+extern const OSSL_DISPATCH km_x25519_mlkem512_to_text_encoder_functions[];
+extern const OSSL_DISPATCH
+    km_PrivateKeyInfo_der_to_x25519_mlkem512_decoder_functions[];
+extern const OSSL_DISPATCH
+    km_SubjectPublicKeyInfo_der_to_x25519_mlkem512_decoder_functions[];
+
+extern const OSSL_DISPATCH
     km_mlkem768_to_PrivateKeyInfo_der_encoder_functions[];
 extern const OSSL_DISPATCH
     km_mlkem768_to_PrivateKeyInfo_pem_encoder_functions[];
@@ -352,6 +406,24 @@ extern const OSSL_DISPATCH
     km_SubjectPublicKeyInfo_der_to_mlkem768_decoder_functions[];
 
 extern const OSSL_DISPATCH
+    km_X25519MLKEM768_to_PrivateKeyInfo_der_encoder_functions[];
+extern const OSSL_DISPATCH
+    km_X25519MLKEM768_to_PrivateKeyInfo_pem_encoder_functions[];
+extern const OSSL_DISPATCH
+    km_X25519MLKEM768_to_EncryptedPrivateKeyInfo_der_encoder_functions[];
+extern const OSSL_DISPATCH
+    km_X25519MLKEM768_to_EncryptedPrivateKeyInfo_pem_encoder_functions[];
+extern const OSSL_DISPATCH
+    km_X25519MLKEM768_to_SubjectPublicKeyInfo_der_encoder_functions[];
+extern const OSSL_DISPATCH
+    km_X25519MLKEM768_to_SubjectPublicKeyInfo_pem_encoder_functions[];
+extern const OSSL_DISPATCH km_X25519MLKEM768_to_text_encoder_functions[];
+extern const OSSL_DISPATCH
+    km_PrivateKeyInfo_der_to_X25519MLKEM768_decoder_functions[];
+extern const OSSL_DISPATCH
+    km_SubjectPublicKeyInfo_der_to_X25519MLKEM768_decoder_functions[];
+
+extern const OSSL_DISPATCH
     km_mlkem1024_to_PrivateKeyInfo_der_encoder_functions[];
 extern const OSSL_DISPATCH
     km_mlkem1024_to_PrivateKeyInfo_pem_encoder_functions[];
@@ -368,7 +440,7 @@ extern const OSSL_DISPATCH
     km_PrivateKeyInfo_der_to_mlkem1024_decoder_functions[];
 extern const OSSL_DISPATCH
     km_SubjectPublicKeyInfo_der_to_mlkem1024_decoder_functions[];
-#endif /* KM_KEM_ENCODERS */
+// #endif /* KM_KEM_ENCODERS */
 
 extern const OSSL_DISPATCH
     km_dilithium2_to_PrivateKeyInfo_der_encoder_functions[];
@@ -580,11 +652,15 @@ extern const OSSL_DISPATCH km_sphincsshake128fsimple_keymgmt_functions[];
 
 
 extern const OSSL_DISPATCH km_kyber512_keymgmt_functions[];
+extern const OSSL_DISPATCH km_ecx_x25519_kyber512_keymgmt_functions[];
 extern const OSSL_DISPATCH km_kyber768_keymgmt_functions[];
+extern const OSSL_DISPATCH km_ecx_x25519_kyber768_keymgmt_functions[];
 extern const OSSL_DISPATCH km_kyber1024_keymgmt_functions[];
 
 extern const OSSL_DISPATCH km_mlkem512_keymgmt_functions[];
+extern const OSSL_DISPATCH km_ecx_x25519_mlkem512_keymgmt_functions[];
 extern const OSSL_DISPATCH km_mlkem768_keymgmt_functions[];
+extern const OSSL_DISPATCH km_ecx_X25519MLKEM768_keymgmt_functions[];
 extern const OSSL_DISPATCH km_mlkem1024_keymgmt_functions[];
 ///// KM_TEMPLATE_FRAGMENT_ALG_FUNCTIONS_END
 

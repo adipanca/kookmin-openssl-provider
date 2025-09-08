@@ -1,17 +1,13 @@
-// SPDX-License-Identifier: Apache-2.0 AND MIT
-
-/*
- * KM OpenSSL 3 provider
- *
- * Code strongly inspired by OpenSSL common provider capabilities.
- *
- * ToDo: Interop testing.
- */
+// SPDX-License-Identifier: Apache-2.0 AND MIT 
+// KM OpenSSL 3 provider
 
 #include <assert.h>
 #include <openssl/core_dispatch.h>
 #include <openssl/core_names.h>
 #include <string.h>
+#include <strings.h>   // <<—  untuk string
+#include <stdio.h>      // <<— untuk fprintf
+#include <stdlib.h>     // <<— untuk atoi
 
 /* For TLS1_VERSION etc */
 #include <openssl/params.h>
@@ -111,37 +107,41 @@ static KM_GROUP_CONSTANTS km_group_list[] = {
 
 // Adds entries for tlsname, `ecx`_tlsname and `ecp`_tlsname
 #define KM_GROUP_ENTRY(tlsname, realname, algorithm, idx)                     \
-    {                                                                          \
-        OSSL_PARAM_utf8_string(OSSL_CAPABILITY_TLS_GROUP_NAME, #tlsname,       \
-                               sizeof(#tlsname)),                              \
-            OSSL_PARAM_utf8_string(OSSL_CAPABILITY_TLS_GROUP_NAME_INTERNAL,    \
-                                   #realname, sizeof(#realname)),              \
-            OSSL_PARAM_utf8_string(OSSL_CAPABILITY_TLS_GROUP_ALG, #algorithm,  \
-                                   sizeof(#algorithm)),                        \
-            OSSL_PARAM_uint(OSSL_CAPABILITY_TLS_GROUP_ID,                      \
-                            (unsigned int *)&km_group_list[idx].group_id),    \
-            OSSL_PARAM_uint(OSSL_CAPABILITY_TLS_GROUP_SECURITY_BITS,           \
-                            (unsigned int *)&km_group_list[idx].secbits),     \
-            OSSL_PARAM_int(OSSL_CAPABILITY_TLS_GROUP_MIN_TLS,                  \
-                           (unsigned int *)&km_group_list[idx].mintls),       \
-            OSSL_PARAM_int(OSSL_CAPABILITY_TLS_GROUP_MAX_TLS,                  \
-                           (unsigned int *)&km_group_list[idx].maxtls),       \
-            OSSL_PARAM_int(OSSL_CAPABILITY_TLS_GROUP_MIN_DTLS,                 \
-                           (unsigned int *)&km_group_list[idx].mindtls),      \
-            OSSL_PARAM_int(OSSL_CAPABILITY_TLS_GROUP_MAX_DTLS,                 \
-                           (unsigned int *)&km_group_list[idx].maxdtls),      \
-            OSSL_PARAM_int(OSSL_CAPABILITY_TLS_GROUP_IS_KEM,                   \
-                           (unsigned int *)&km_group_list[idx].is_kem),       \
-            OSSL_PARAM_END                                                     \
+    {                                                                         \
+        OSSL_PARAM_utf8_string(OSSL_CAPABILITY_TLS_GROUP_NAME,                \
+                               (char *)#tlsname, sizeof(#tlsname)),           \
+        OSSL_PARAM_utf8_string(OSSL_CAPABILITY_TLS_GROUP_NAME_INTERNAL,       \
+                               (char *)#realname, sizeof(#realname)),         \
+        OSSL_PARAM_utf8_string(OSSL_CAPABILITY_TLS_GROUP_ALG,                 \
+                               (char *)#algorithm, sizeof(#algorithm)),       \
+        OSSL_PARAM_uint(OSSL_CAPABILITY_TLS_GROUP_ID,                         \
+                        (unsigned int *)&km_group_list[idx].group_id),        \
+        OSSL_PARAM_uint(OSSL_CAPABILITY_TLS_GROUP_SECURITY_BITS,              \
+                        (unsigned int *)&km_group_list[idx].secbits),         \
+        OSSL_PARAM_int(OSSL_CAPABILITY_TLS_GROUP_MIN_TLS,                     \
+                       (int *)&km_group_list[idx].mintls),                    \
+        OSSL_PARAM_int(OSSL_CAPABILITY_TLS_GROUP_MAX_TLS,                     \
+                       (int *)&km_group_list[idx].maxtls),                    \
+        OSSL_PARAM_int(OSSL_CAPABILITY_TLS_GROUP_MIN_DTLS,                    \
+                       (int *)&km_group_list[idx].mindtls),                   \
+        OSSL_PARAM_int(OSSL_CAPABILITY_TLS_GROUP_MAX_DTLS,                    \
+                       (int *)&km_group_list[idx].maxdtls),                   \
+        OSSL_PARAM_int(OSSL_CAPABILITY_TLS_GROUP_IS_KEM,                      \
+                       (int *)&km_group_list[idx].is_kem),                    \
+        OSSL_PARAM_END                                                        \
     }
 
 static const OSSL_PARAM km_param_group_list[][11] = {
 ///// KM_TEMPLATE_FRAGMENT_GROUP_NAMES_START
     KM_GROUP_ENTRY(kyber512, kyber512, kyber512, 16),
+    KM_GROUP_ENTRY(x25519_mlkem512, x25519_mlkem512, x25519_mlkem512, 18),
     KM_GROUP_ENTRY(kyber768, kyber768, kyber768, 19),
+    KM_GROUP_ENTRY(kyber768, x25519_kyber768, x25519_kyber768, 22),
     KM_GROUP_ENTRY(kyber1024, kyber1024, kyber1024, 24),
     KM_GROUP_ENTRY(mlkem512, mlkem512, mlkem512, 26),
+    KM_GROUP_ENTRY(x25519_mlkem512, x25519_mlkem512, x25519_mlkem512, 28),
     KM_GROUP_ENTRY(mlkem768, mlkem768, mlkem768, 29),
+    KM_GROUP_ENTRY(X25519MLKEM768, X25519MLKEM768, X25519MLKEM768, 32),
     KM_GROUP_ENTRY(mlkem1024, mlkem1024, mlkem1024, 34),
     ///// KM_TEMPLATE_FRAGMENT_GROUP_NAMES_END
 };
@@ -188,76 +188,57 @@ static KM_SIGALG_CONSTANTS km_sigalg_list[] = {
     ///// KM_TEMPLATE_FRAGMENT_SIGALG_ASSIGNMENTS_END
 };
 
-int km_patch_codepoints() {
-    ///// KM_TEMPLATE_FRAGMENT_CODEPOINT_PATCHING_START
-    if (getenv("KM_CODEPOINT_DILITHIUM2"))
-        km_sigalg_list[0].code_point =
-            atoi(getenv("KM_CODEPOINT_DILITHIUM2"));
-    
-    if (getenv("KM_CODEPOINT_DILITHIUM3"))
-        km_sigalg_list[1].code_point =
-            atoi(getenv("KM_CODEPOINT_DILITHIUM3"));
-    
-    if (getenv("KM_CODEPOINT_DILITHIUM5"))
-        km_sigalg_list[2].code_point =
-            atoi(getenv("KM_CODEPOINT_DILITHIUM5"));
+int km_patch_codepoints(void) {
+    struct {
+        const char *envname;
+        int *target;
+    } map[] = {
+        { "KM_CODEPOINT_DILITHIUM2",  (int *)&km_sigalg_list[0].code_point },
+        { "KM_CODEPOINT_DILITHIUM3",  (int *)&km_sigalg_list[1].code_point },
+        { "KM_CODEPOINT_DILITHIUM5",  (int *)&km_sigalg_list[2].code_point },
+        { "KM_CODEPOINT_MLDSA44",     (int *)&km_sigalg_list[3].code_point },
+        { "KM_CODEPOINT_MLDSA65",     (int *)&km_sigalg_list[4].code_point },
+        { "KM_CODEPOINT_MLDSA87",     (int *)&km_sigalg_list[5].code_point },
+        { "KM_CODEPOINT_SPHINCSSHA2128FSIMPLE", 
+                                      (int *)&km_sigalg_list[6].code_point },
+        { "KM_CODEPOINT_P256_SPHINCSSHA2128FSIMPLE", 
+                                      (int *)&km_sigalg_list[7].code_point },
+        { "KM_CODEPOINT_RSA3072_SPHINCSSHA2128FSIMPLE", 
+                                      (int *)&km_sigalg_list[8].code_point },
+        { "KM_CODEPOINT_SPHINCSSHA2128SSIMPLE", 
+                                      (int *)&km_sigalg_list[9].code_point },
+        { "KM_CODEPOINT_P256_SPHINCSSHA2128SSIMPLE", 
+                                      (int *)&km_sigalg_list[10].code_point },
+        { "KM_CODEPOINT_RSA3072_SPHINCSSHA2128SSIMPLE", 
+                                      (int *)&km_sigalg_list[11].code_point },
+        { "KM_CODEPOINT_SPHINCSSHA2192FSIMPLE", 
+                                      (int *)&km_sigalg_list[12].code_point },
+        { "KM_CODEPOINT_SPHINCSSHAKE128FSIMPLE", 
+                                      (int *)&km_sigalg_list[13].code_point },
+        { "KM_CODEPOINT_P256_SPHINCSSHAKE128FSIMPLE", 
+                                      (int *)&km_sigalg_list[14].code_point },
+        { "KM_CODEPOINT_RSA3072_SPHINCSSHAKE128FSIMPLE", 
+                                      (int *)&km_sigalg_list[15].code_point },
 
-    if (getenv("KM_CODEPOINT_MLDSA44"))
-        km_sigalg_list[3].code_point = atoi(getenv("KM_CODEPOINT_MLDSA44"));
-    if (getenv("KM_CODEPOINT_MLDSA65"))
-        km_sigalg_list[4].code_point = atoi(getenv("KM_CODEPOINT_MLDSA65"));
-    if (getenv("KM_CODEPOINT_MLDSA87"))
-        km_sigalg_list[5].code_point = atoi(getenv("KM_CODEPOINT_MLDSA87"));
+        { "KM_CODEPOINT_KYBER512",  (int *)&km_group_list[0].group_id },
+        { "KM_CODEPOINT_X25519_KYBER512",  (int *)&km_group_list[1].group_id },
+        { "KM_CODEPOINT_KYBER768",  (int *)&km_group_list[2].group_id },
+        { "KM_CODEPOINT_X25519_KYBER768",  (int *)&km_group_list[3].group_id },
+        { "KM_CODEPOINT_KYBER1024", (int *)&km_group_list[4].group_id },
+        { "KM_CODEPOINT_MLKEM512",  (int *)&km_group_list[5].group_id },
+        { "KM_CODEPOINT_X25519_MLKEM512",  (int *)&km_group_list[6].group_id },
+        { "KM_CODEPOINT_MLKEM768",  (int *)&km_group_list[7].group_id },
+        { "KM_CODEPOINT_X25519MLKEM768",  (int *)&km_group_list[8].group_id },
+        { "KM_CODEPOINT_MLKEM1024", (int *)&km_group_list[9].group_id },
+    };
 
-    if (getenv("KM_CODEPOINT_SPHINCSSHA2128FSIMPLE"))
-        km_sigalg_list[6].code_point =
-            atoi(getenv("KM_CODEPOINT_SPHINCSSHA2128FSIMPLE"));
-    if (getenv("KM_CODEPOINT_P256_SPHINCSSHA2128FSIMPLE"))
-        km_sigalg_list[7].code_point =
-            atoi(getenv("KM_CODEPOINT_P256_SPHINCSSHA2128FSIMPLE"));
-    if (getenv("KM_CODEPOINT_RSA3072_SPHINCSSHA2128FSIMPLE"))
-        km_sigalg_list[8].code_point =
-            atoi(getenv("KM_CODEPOINT_RSA3072_SPHINCSSHA2128FSIMPLE"));
+    for (size_t i = 0; i < sizeof(map)/sizeof(map[0]); i++) {
+        const char *val = getenv(map[i].envname);
+        if (val != NULL) {
+            *(map[i].target) = atoi(val);
+        }
+    }
 
-    if (getenv("KM_CODEPOINT_SPHINCSSHA2128SSIMPLE"))
-        km_sigalg_list[9].code_point =
-            atoi(getenv("KM_CODEPOINT_SPHINCSSHA2128SSIMPLE"));
-    if (getenv("KM_CODEPOINT_P256_SPHINCSSHA2128SSIMPLE"))
-        km_sigalg_list[10].code_point =
-            atoi(getenv("KM_CODEPOINT_P256_SPHINCSSHA2128SSIMPLE"));
-    if (getenv("KM_CODEPOINT_RSA3072_SPHINCSSHA2128SSIMPLE"))
-        km_sigalg_list[11].code_point =
-            atoi(getenv("KM_CODEPOINT_RSA3072_SPHINCSSHA2128SSIMPLE"));
-
-    if (getenv("KM_CODEPOINT_SPHINCSSHA2192FSIMPLE"))
-        km_sigalg_list[12].code_point =
-            atoi(getenv("KM_CODEPOINT_SPHINCSSHA2192FSIMPLE"));
-
-    if (getenv("KM_CODEPOINT_SPHINCSSHAKE128FSIMPLE"))
-        km_sigalg_list[13].code_point =
-            atoi(getenv("KM_CODEPOINT_SPHINCSSHAKE128FSIMPLE"));
-    if (getenv("KM_CODEPOINT_P256_SPHINCSSHAKE128FSIMPLE"))
-        km_sigalg_list[14].code_point =
-            atoi(getenv("KM_CODEPOINT_P256_SPHINCSSHAKE128FSIMPLE"));
-    if (getenv("KM_CODEPOINT_RSA3072_SPHINCSSHAKE128FSIMPLE"))
-        km_sigalg_list[15].code_point =
-            atoi(getenv("KM_CODEPOINT_RSA3072_SPHINCSSHAKE128FSIMPLE"));
-
-    if (getenv("KM_CODEPOINT_KYBER512"))
-        km_group_list[0].group_id = atoi(getenv("KM_CODEPOINT_KYBER512"));
-    if (getenv("KM_CODEPOINT_KYBER768"))
-        km_group_list[1].group_id = atoi(getenv("KM_CODEPOINT_KYBER768"));
-    if (getenv("KM_CODEPOINT_KYBER1024"))
-        km_group_list[2].group_id = atoi(getenv("KM_CODEPOINT_KYBER1024"));
-
-    if (getenv("KM_CODEPOINT_MLKEM512"))
-        km_group_list[3].group_id = atoi(getenv("KM_CODEPOINT_MLKEM512"));
-    if (getenv("KM_CODEPOINT_MLKEM768"))
-        km_group_list[4].group_id = atoi(getenv("KM_CODEPOINT_MLKEM768"));
-    if (getenv("KM_CODEPOINT_MLKEM1024"))
-        km_group_list[5].group_id = atoi(getenv("KM_CODEPOINT_MLKEM1024"));
-
-    ///// KM_TEMPLATE_FRAGMENT_CODEPOINT_PATCHING_END
     return 1;
 }
 
@@ -274,22 +255,22 @@ static int km_group_capability(OSSL_CALLBACK *cb, void *arg) {
 
 #ifdef OSSL_CAPABILITY_TLS_SIGALG_NAME
 #define KM_SIGALG_ENTRY(tlsname, realname, algorithm, oid, idx)               \
-    {                                                                          \
-        OSSL_PARAM_utf8_string(OSSL_CAPABILITY_TLS_SIGALG_IANA_NAME, #tlsname, \
-                               sizeof(#tlsname)),                              \
-            OSSL_PARAM_utf8_string(OSSL_CAPABILITY_TLS_SIGALG_NAME, #tlsname,  \
-                                   sizeof(#tlsname)),                          \
-            OSSL_PARAM_utf8_string(OSSL_CAPABILITY_TLS_SIGALG_OID, #oid,       \
-                                   sizeof(#oid)),                              \
-            OSSL_PARAM_uint(OSSL_CAPABILITY_TLS_SIGALG_CODE_POINT,             \
-                            (unsigned int *)&km_sigalg_list[idx].code_point), \
-            OSSL_PARAM_uint(OSSL_CAPABILITY_TLS_SIGALG_SECURITY_BITS,          \
-                            (unsigned int *)&km_sigalg_list[idx].secbits),    \
-            OSSL_PARAM_int(OSSL_CAPABILITY_TLS_SIGALG_MIN_TLS,                 \
-                           (unsigned int *)&km_sigalg_list[idx].mintls),      \
-            OSSL_PARAM_int(OSSL_CAPABILITY_TLS_SIGALG_MAX_TLS,                 \
-                           (unsigned int *)&km_sigalg_list[idx].maxtls),      \
-            OSSL_PARAM_END                                                     \
+    {                                                                         \
+        OSSL_PARAM_utf8_string(OSSL_CAPABILITY_TLS_SIGALG_IANA_NAME,          \
+                               (char *)#tlsname, sizeof(#tlsname)),           \
+        OSSL_PARAM_utf8_string(OSSL_CAPABILITY_TLS_SIGALG_NAME,               \
+                               (char *)#tlsname, sizeof(#tlsname)),           \
+        OSSL_PARAM_utf8_string(OSSL_CAPABILITY_TLS_SIGALG_OID,                \
+                               (char *)#oid, sizeof(#oid)),                   \
+        OSSL_PARAM_uint(OSSL_CAPABILITY_TLS_SIGALG_CODE_POINT,                \
+                        (unsigned int *)&km_sigalg_list[idx].code_point),     \
+        OSSL_PARAM_uint(OSSL_CAPABILITY_TLS_SIGALG_SECURITY_BITS,             \
+                        (unsigned int *)&km_sigalg_list[idx].secbits),        \
+        OSSL_PARAM_int(OSSL_CAPABILITY_TLS_SIGALG_MIN_TLS,                    \
+                       (int *)&km_sigalg_list[idx].mintls),                   \
+        OSSL_PARAM_int(OSSL_CAPABILITY_TLS_SIGALG_MAX_TLS,                    \
+                       (int *)&km_sigalg_list[idx].maxtls),                   \
+        OSSL_PARAM_END                                                        \
     }
 
 static const OSSL_PARAM km_param_sigalg_list[][12] = {
@@ -315,7 +296,7 @@ static const OSSL_PARAM km_param_sigalg_list[][12] = {
     ///// KM_TEMPLATE_FRAGMENT_SIGALG_NAMES_END
 };
 
-static int km_sigalg_capability(OSSL_CALLBACK *cb, void *arg) {
+static int km_sigalg_readiness(OSSL_CALLBACK *cb, void *arg) {
     size_t i;
 
     // relaxed assertion for the case that not all algorithms are enabled in
@@ -330,20 +311,19 @@ static int km_sigalg_capability(OSSL_CALLBACK *cb, void *arg) {
 }
 #endif /* OSSL_CAPABILITY_TLS_SIGALG_NAME */
 
-int km_provider_get_capabilities(void *provctx, const char *capability,
+int km_provider_get_readiness(void *provctx, const char *capability,
                                   OSSL_CALLBACK *cb, void *arg) {
     if (strcasecmp(capability, "TLS-GROUP") == 0)
         return km_group_capability(cb, arg);
 
 #ifdef OSSL_CAPABILITY_TLS_SIGALG_NAME
     if (strcasecmp(capability, "TLS-SIGALG") == 0)
-        return km_sigalg_capability(cb, arg);
+        return km_sigalg_readiness(cb, arg);
 #else
 #ifndef NDEBUG
-    fprintf(stderr, "Warning: OSSL_CAPABILITY_TLS_SIGALG_NAME not defined: "
-                    "OpenSSL version used that does not support pluggable "
-                    "signature capabilities.\nUpgrading OpenSSL installation "
-                    "recommended to enable QSC TLS signature support.\n\n");
+    fprintf(stderr,
+            "[KM Provider] Warning: TLS signature capability (OSSL_CAPABILITY_TLS_SIGALG_NAME) not found.\n"
+            "Upgrade OpenSSL to enable QSC TLS signature support.\n\n");
 #endif /* NDEBUG */
 #endif /* OSSL_CAPABILITY_TLS_SIGALG_NAME */
 

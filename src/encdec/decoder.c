@@ -524,13 +524,19 @@ static void kmx_key_adjust(void *key, struct der2key_ctx_st *ctx) {
          {0, NULL}}
 
 ///// KM_TEMPLATE_FRAGMENT_DECODER_MAKE_START
-#ifdef KM_KEM_ENCODERS
+// #ifdef KM_KEM_ENCODERS
 
 MAKE_DECODER(, "kyber512", kyber512, kmx, PrivateKeyInfo);
 MAKE_DECODER(, "kyber512", kyber512, kmx, SubjectPublicKeyInfo);
+MAKE_DECODER(_ecx, "x25519_kyber512", x25519_kyber512, kmx, PrivateKeyInfo);
+MAKE_DECODER(_ecx, "x25519_kyber512", x25519_kyber512, kmx,
+             SubjectPublicKeyInfo);
 
 MAKE_DECODER(, "kyber768", kyber768, kmx, PrivateKeyInfo);
 MAKE_DECODER(, "kyber768", kyber768, kmx, SubjectPublicKeyInfo);
+MAKE_DECODER(_ecx, "x25519_kyber768", x25519_kyber768, kmx, PrivateKeyInfo);
+MAKE_DECODER(_ecx, "x25519_kyber768", x25519_kyber768, kmx,
+             SubjectPublicKeyInfo);
 
 MAKE_DECODER(, "kyber1024", kyber1024, kmx, PrivateKeyInfo);
 MAKE_DECODER(, "kyber1024", kyber1024, kmx, SubjectPublicKeyInfo);
@@ -538,15 +544,21 @@ MAKE_DECODER(, "kyber1024", kyber1024, kmx, SubjectPublicKeyInfo);
 
 MAKE_DECODER(, "mlkem512", mlkem512, kmx, PrivateKeyInfo);
 MAKE_DECODER(, "mlkem512", mlkem512, kmx, SubjectPublicKeyInfo);
+MAKE_DECODER(_ecx, "x25519_mlkem512", x25519_mlkem512, kmx, PrivateKeyInfo);
+MAKE_DECODER(_ecx, "x25519_mlkem512", x25519_mlkem512, kmx,
+             SubjectPublicKeyInfo);
 
 MAKE_DECODER(, "mlkem768", mlkem768, kmx, PrivateKeyInfo);
 MAKE_DECODER(, "mlkem768", mlkem768, kmx, SubjectPublicKeyInfo);
+MAKE_DECODER(_ecx, "X25519MLKEM768", X25519MLKEM768, kmx, PrivateKeyInfo);
+MAKE_DECODER(_ecx, "X25519MLKEM768", X25519MLKEM768, kmx,
+             SubjectPublicKeyInfo);
 
 MAKE_DECODER(, "mlkem1024", mlkem1024, kmx, PrivateKeyInfo);
 MAKE_DECODER(, "mlkem1024", mlkem1024, kmx, SubjectPublicKeyInfo);
 
 
-#endif /* KM_KEM_ENCODERS */
+// #endif /* KM_KEM_ENCODERS */
 
 MAKE_DECODER(, "dilithium2", dilithium2, kmx, PrivateKeyInfo);
 MAKE_DECODER(, "dilithium2", dilithium2, kmx, SubjectPublicKeyInfo);

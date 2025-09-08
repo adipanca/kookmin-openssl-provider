@@ -52,21 +52,26 @@ static int kmx_key_recreate_classickey(KMX_KEY *key, kmx_key_op_t op);
 
 ///// KM_TEMPLATE_FRAGMENT_KMNAMES_START
 
-#ifdef KM_KEM_ENCODERS
+// #ifdef KM_KEM_ENCODERS
 #define NID_TABLE_LEN 110
-#else
-#define NID_TABLE_LEN 57
-#endif
+// #else
+// #define NID_TABLE_LEN 57
+// #endif
 
 static km_nid_name_t nid_names[NID_TABLE_LEN] = {
-#ifdef KM_KEM_ENCODERS
+// #ifdef KM_KEM_ENCODERS
     {0, "kyber512", OQS_KEM_alg_kyber_512, KEY_TYPE_KEM, 128, 0},
+    {0, "x25519_kyber512", OQS_KEM_alg_kyber_512, KEY_TYPE_ECX_HYB_KEM, 128, 0},
     {0, "kyber768", OQS_KEM_alg_kyber_768, KEY_TYPE_KEM, 192, 0},
+    {0, "x25519_kyber768", OQS_KEM_alg_kyber_768, KEY_TYPE_ECX_HYB_KEM, 192, 0},
     {0, "kyber1024", OQS_KEM_alg_kyber_1024, KEY_TYPE_KEM, 256, 0},
     {0, "mlkem512", OQS_KEM_alg_ml_kem_512, KEY_TYPE_KEM, 128, 0},
+    {0, "x25519_mlkem512", OQS_KEM_alg_ml_kem_512, KEY_TYPE_ECX_HYB_KEM, 128,
+     1},
     {0, "mlkem768", OQS_KEM_alg_ml_kem_768, KEY_TYPE_KEM, 192, 0},
+    {0, "X25519MLKEM768", OQS_KEM_alg_ml_kem_768, KEY_TYPE_ECX_HYB_KEM, 192, 1},
     {0, "mlkem1024", OQS_KEM_alg_ml_kem_1024, KEY_TYPE_KEM, 256, 0},
-#endif /* KM_KEM_ENCODERS */
+// #endif /* KM_KEM_ENCODERS */
     {0, "dilithium2", OQS_SIG_alg_dilithium_2, KEY_TYPE_SIG, 128},
     {0, "dilithium3", OQS_SIG_alg_dilithium_3, KEY_TYPE_SIG, 192},
     {0, "dilithium5", OQS_SIG_alg_dilithium_5, KEY_TYPE_SIG, 256},
