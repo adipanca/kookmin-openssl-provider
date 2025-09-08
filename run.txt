@@ -1,0 +1,246 @@
+sudo apt update
+sudo apt install build-essential perl git libssl-dev cmake automake libtool gcc tree
+
+git clone --branch openssl-3.0 https://github.com/openssl/openssl.git
+cd ~/openssl
+
+./config --prefix=/opt/openssl-master --openssldir=/opt/openssl-master/ssl shared enable-fips enable-tls1_3 
+
+make -j$(nproc) # Menggunakan semua core CPU yang tersedia untuk kompilasi lebih cepat
+
+sudo make install
+
+echo 'export PATH="/opt/openssl-master/bin:$PATH"' >> ~/.bashrc
+echo 'export LD_LIBRARY_PATH="/opt/openssl-master/lib:$LD_LIBRARY_PATH"' >> ~/.bashrc
+source ~/.bashrc # Muat ulang konfigurasi shell
+
+export PATH="/opt/openssl-master/bin:$PATH"
+export LD_LIBRARY_PATH="/opt/openssl-master/lib:$LD_LIBRARY_PATH"
+
+openssl version
+
+============================================================================================================================================
+
+cd ~ # Kembali ke direktori home atau lokasi proyek Anda
+git clone https://github.com/open-quantum-safe/liboqs.git
+cd ~/liboqs
+
+rm -rf build
+
+mkdir build && cd build
+
+cmake .. \
+  -DBUILD_SHARED_LIBS=ON \
+  -DOQS_DIST_BUILD=ON \
+  -DCMAKE_INSTALL_PREFIX=/opt/liboqs \
+  -DOQS_ENABLE_KEM_KYBER=ON \
+  -DOQS_ENABLE_KEM_NTRUPRIME=ON \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DOPENSSL_ROOT_DIR=/opt/openssl-master \
+  -DOPENSSL_LIBRARIES=/opt/openssl-master/lib \
+  -DOPENSSL_INCLUDE_DIR=/opt/openssl-master/include
+
+make -j$(nproc)
+sudo make install
+
+============================================================================================================================================
+
+git clone https://github.com/adipanca/kookminlib.git
+
+cd ~/kookmin-openssl-provider
+rm -rf build
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
+  -DOPENSSL_ROOT_DIR=/opt/openssl-master \
+  -DCMAKE_INSTALL_PREFIX=/opt/openssl-master \
+  -DCMAKE_INSTALL_LIBDIR=lib
+cmake --build build -j
+sudo cmake --install build
+# verifikasi
+ls -l /opt/openssl-master/lib/ossl-modules/kookminlib.so
+cd ~/kookmin-openssl-provider/tests
+
+
+sudo nano /opt/openssl-master/ssl/openssl.cnf
+
+[openssl_init]
+providers = provider_sect
+
+ssl_conf = ssl_sect  
+
+[ssl_sect]  
+system_default = system_default_sect  
+
+[system_default_sect] 
+Groups = MLKEM512:MLKEM768:MLKEM1024 #ini HPQC
+
+# List of providers to load
+[provider_sect]
+default = default_sect
+kookminlib = kookminlib_sect
+
+[kookminlib_sect]
+activate = 1
+identity = kookminlib
+path = /opt/openssl-master/lib/ossl-modules/kookminlib.so
+#module = kookminlib.so
+
+[default_sect]
+activate = 1
+
+
+
+
+
+
+
+
+cd ~/kookmin-openssl-provider
+rm -rf build
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
+  -DOPENSSL_ROOT_DIR=/opt/openssl-master \
+  -DCMAKE_INSTALL_PREFIX=/opt/openssl-master \
+  -DCMAKE_INSTALL_LIBDIR=lib
+cmake --build build -j
+sudo cmake --install build
+# verifikasi
+ls -l /opt/openssl-master/lib/ossl-modules/kookminlib.so
+cd ~/kookmin-openssl-provider/tests
+
+
+
+echo "/opt/liboqs/lib" | sudo tee /etc/ld.so.conf.d/liboqs.conf
+sudo ldconfig
+ldconfig -p | grep liboqs   # harus ada entri liboqs
+
+
+ldd /opt/openssl-master/lib/ossl-modules/kookminlib.so
+
+export OPENSSL_MODULES=/opt/openssl-master/lib/ossl-modules
+/opt/openssl-master/bin/openssl list -providers -provider default -provider kookminlib
+
+/opt/openssl-master/bin/openssl list -signature-algorithms -provider default -provider kookminlib
+
+/opt/openssl-master/bin/openssl list -kem-algorithms -provider default -provider kookminlib
+
+/opt/openssl-master/bin/openssl list -key-managers -provider default -provider kookminlib
+
+
+
+/opt/openssl-master/bin/openssl list -providers -provider default -provider kookminlib
+
+/opt/openssl-master/bin/openssl list -encoders -provider kookminlib | grep -Ei 'mldsa|mlkem'
+
+
+
+/opt/openssl-master/bin/openssl genpkey \
+  -provider default -provider kookminlib -propquery "provider=kookminlib" \
+  -algorithm mldsa44 -out mldsa44_priv.der -outform DER
+
+
+/opt/openssl-master/bin/openssl pkey \
+  -provider default -provider kookminlib \
+  -in mldsa44_priv.der -inform DER -text -noout
+
+/opt/openssl-master/bin/openssl pkey \
+  -provider default -provider kookminlib \
+  -in mldsa44_priv.der -inform DER -pubout -out mldsa44_pub.der -outform DER
+
+
+
+/opt/openssl-master/bin/openssl asn1parse -inform DER -in mldsa44_priv.der -i -dump
+/opt/openssl-master/bin/openssl asn1parse -inform DER -in mldsa44_pub.der -i -dump
+
+
+#uji sertifikat : 
+# pesan uji (acak 32 byte)
+head -c 32 /dev/urandom > msg.bin
+
+# SIGN (RAW)
+ /opt/openssl-master/bin/openssl pkeyutl \
+  -provider default -provider kookminlib \
+  -sign -inkey mldsa44_priv.der -keyform DER \
+  -rawin -in msg.bin -out sig.bin
+
+wc -c sig.bin  # sanity: ukurannya sesuai skema
+
+# VERIFY (RAW)
+ /opt/openssl-master/bin/openssl pkeyutl \
+  -provider default -provider kookminlib \
+  -verify -pubin -inkey mldsa44_pub.der -keyform DER \
+  -rawin -in msg.bin -sigfile sig.bin && echo "OK" || echo "FAIL"
+
+#Negatif test (harus gagal)
+printf X >> msg.bin
+/opt/openssl-master/bin/openssl pkeyutl \
+  -provider default -provider kookminlib \
+  -verify -pubin -inkey mldsa44_pub.der -keyform DER \
+  -rawin -in msg.bin -sigfile sig.bin && echo "UNEXPECTED" || echo "EXPECTED FAIL"
+
+
+
+  #list algoritma
+  SLH-DSA = sphincssha2128fsimple, sphincssha2128ssimple, sphincssha2192fsimple, sphincsshake128fsimple 
+  MLDSA = mldsa44, mldsa65, mldsa87 , dilithium2, dilithium3, dilithium5
+  ML-KEM = mlkem512, mlkem768, mlkem1024, kyber512, kyber768, kyber1024
+
+
+#rename
+chmod +x rename_oqs_to_km.sh
+# simulasi (lihat apa saja yang akan diubah)
+./rename_oqs_to_km.sh -n .
+
+# jalankan sungguhan di folder saat ini
+./rename_oqs_to_km.sh .
+
+# jalankan tanpa rename nama file
+./rename_oqs_to_km.sh --no-rename-files .
+
+
+
+
+#rename 2
+
+chmod +x rename_oqsx_to_kmx.sh
+# simulasi (tidak menulis perubahan)
+./rename_oqsx_to_kmx.sh -n .
+
+# jalankan sungguhan di folder saat ini
+./rename_oqsx_to_kmx.sh .
+
+# jalankan tanpa rename nama file
+./rename_oqsx_to_kmx.sh --no-rename-files .
+
+
+
+
+
+cd ~/kookmin-openssl-provider
+rm -rf build
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
+  -DOPENSSL_ROOT_DIR=/opt/openssl-master \
+  -DCMAKE_INSTALL_PREFIX=/opt/openssl-master \
+  -DCMAKE_INSTALL_LIBDIR=lib
+cmake --build build -j
+sudo cmake --install build
+# verifikasi
+ls -l /opt/openssl-master/lib/ossl-modules/kookminlib.so
+
+#tidak boleh rename, karena ambil dari liboqs
+1. OQS_SIG
+2. OQS_KEM
+3. OQS_SIG_alg
+4. OQS_KEM_alg
+5. OQS_SUCCESS
+6. OQS_SIG_free
+7. OQS_KEM_free
+8. OQS_KEM_new
+9. OQS_SIG_new
+10. OQS_destroy
+11. OQS_init
+12. OQS_SIG_sign
+13. OQS_SIG_verify
+14. OQS_ERROR
+15. OQS_KEM_encaps
+16. OQS_KEM_decaps
+17. OQS_KEM_keypair
+18. OQS_SIG_keypair

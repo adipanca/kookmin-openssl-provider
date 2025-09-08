@@ -1,19 +1,26 @@
-openssl_conf = openssl_init
-
+sudo nano /opt/openssl-master/ssl/openssl.cnf
 
 [openssl_init]
 providers = provider_sect
 
+ssl_conf = ssl_sect  
 
+[ssl_sect]  
+system_default = system_default_sect  
+
+[system_default_sect] 
+Groups = MLKEM512:MLKEM768:MLKEM1024 #ini HPQC
+
+# List of providers to load
 [provider_sect]
 default = default_sect
-kookminlib = kookminprovider_sect
+kookminlib = kookminlib_sect
 
+[kookminlib_sect]
+activate = 1
+identity = kookminlib
+path = /opt/openssl-master/lib64/ossl-modules/kookminlib.so
+#module = kookminlib.so
 
 [default_sect]
-activate = 1
-
-
-[kookminprovider_sect]
-module = kookminlib.so # sesuaikan path install
 activate = 1

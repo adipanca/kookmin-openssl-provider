@@ -174,149 +174,221 @@ kookminlib/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/kookminlib.dir/build.make CMakeFiles/kookminlib.dir/build
 .PHONY : kookminlib/fast
 
-src/kem/kem_keymgmt.o: src/kem/kem_keymgmt.c.o
-.PHONY : src/kem/kem_keymgmt.o
+src/bio.o: src/bio.c.o
+.PHONY : src/bio.o
 
 # target to build an object file
-src/kem/kem_keymgmt.c.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/kookminlib.dir/build.make CMakeFiles/kookminlib.dir/src/kem/kem_keymgmt.c.o
-.PHONY : src/kem/kem_keymgmt.c.o
+src/bio.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kookminlib.dir/build.make CMakeFiles/kookminlib.dir/src/bio.c.o
+.PHONY : src/bio.c.o
 
-src/kem/kem_keymgmt.i: src/kem/kem_keymgmt.c.i
-.PHONY : src/kem/kem_keymgmt.i
+src/bio.i: src/bio.c.i
+.PHONY : src/bio.i
 
 # target to preprocess a source file
-src/kem/kem_keymgmt.c.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/kookminlib.dir/build.make CMakeFiles/kookminlib.dir/src/kem/kem_keymgmt.c.i
-.PHONY : src/kem/kem_keymgmt.c.i
+src/bio.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kookminlib.dir/build.make CMakeFiles/kookminlib.dir/src/bio.c.i
+.PHONY : src/bio.c.i
 
-src/kem/kem_keymgmt.s: src/kem/kem_keymgmt.c.s
-.PHONY : src/kem/kem_keymgmt.s
+src/bio.s: src/bio.c.s
+.PHONY : src/bio.s
 
 # target to generate assembly for a file
-src/kem/kem_keymgmt.c.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/kookminlib.dir/build.make CMakeFiles/kookminlib.dir/src/kem/kem_keymgmt.c.s
-.PHONY : src/kem/kem_keymgmt.c.s
+src/bio.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kookminlib.dir/build.make CMakeFiles/kookminlib.dir/src/bio.c.s
+.PHONY : src/bio.c.s
 
-src/kem/kem_ops.o: src/kem/kem_ops.c.o
-.PHONY : src/kem/kem_ops.o
+src/capabilities.o: src/capabilities.c.o
+.PHONY : src/capabilities.o
 
 # target to build an object file
-src/kem/kem_ops.c.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/kookminlib.dir/build.make CMakeFiles/kookminlib.dir/src/kem/kem_ops.c.o
-.PHONY : src/kem/kem_ops.c.o
+src/capabilities.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kookminlib.dir/build.make CMakeFiles/kookminlib.dir/src/capabilities.c.o
+.PHONY : src/capabilities.c.o
 
-src/kem/kem_ops.i: src/kem/kem_ops.c.i
-.PHONY : src/kem/kem_ops.i
+src/capabilities.i: src/capabilities.c.i
+.PHONY : src/capabilities.i
 
 # target to preprocess a source file
-src/kem/kem_ops.c.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/kookminlib.dir/build.make CMakeFiles/kookminlib.dir/src/kem/kem_ops.c.i
-.PHONY : src/kem/kem_ops.c.i
+src/capabilities.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kookminlib.dir/build.make CMakeFiles/kookminlib.dir/src/capabilities.c.i
+.PHONY : src/capabilities.c.i
 
-src/kem/kem_ops.s: src/kem/kem_ops.c.s
-.PHONY : src/kem/kem_ops.s
+src/capabilities.s: src/capabilities.c.s
+.PHONY : src/capabilities.s
 
 # target to generate assembly for a file
-src/kem/kem_ops.c.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/kookminlib.dir/build.make CMakeFiles/kookminlib.dir/src/kem/kem_ops.c.s
-.PHONY : src/kem/kem_ops.c.s
+src/capabilities.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kookminlib.dir/build.make CMakeFiles/kookminlib.dir/src/capabilities.c.s
+.PHONY : src/capabilities.c.s
 
-src/km_util.o: src/km_util.c.o
-.PHONY : src/km_util.o
+src/encdec/decoder.o: src/encdec/decoder.c.o
+.PHONY : src/encdec/decoder.o
 
 # target to build an object file
-src/km_util.c.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/kookminlib.dir/build.make CMakeFiles/kookminlib.dir/src/km_util.c.o
-.PHONY : src/km_util.c.o
+src/encdec/decoder.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kookminlib.dir/build.make CMakeFiles/kookminlib.dir/src/encdec/decoder.c.o
+.PHONY : src/encdec/decoder.c.o
 
-src/km_util.i: src/km_util.c.i
-.PHONY : src/km_util.i
+src/encdec/decoder.i: src/encdec/decoder.c.i
+.PHONY : src/encdec/decoder.i
 
 # target to preprocess a source file
-src/km_util.c.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/kookminlib.dir/build.make CMakeFiles/kookminlib.dir/src/km_util.c.i
-.PHONY : src/km_util.c.i
+src/encdec/decoder.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kookminlib.dir/build.make CMakeFiles/kookminlib.dir/src/encdec/decoder.c.i
+.PHONY : src/encdec/decoder.c.i
 
-src/km_util.s: src/km_util.c.s
-.PHONY : src/km_util.s
+src/encdec/decoder.s: src/encdec/decoder.c.s
+.PHONY : src/encdec/decoder.s
 
 # target to generate assembly for a file
-src/km_util.c.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/kookminlib.dir/build.make CMakeFiles/kookminlib.dir/src/km_util.c.s
-.PHONY : src/km_util.c.s
+src/encdec/decoder.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kookminlib.dir/build.make CMakeFiles/kookminlib.dir/src/encdec/decoder.c.s
+.PHONY : src/encdec/decoder.c.s
 
-src/provider_core.o: src/provider_core.c.o
-.PHONY : src/provider_core.o
+src/encdec/encoder.o: src/encdec/encoder.c.o
+.PHONY : src/encdec/encoder.o
 
 # target to build an object file
-src/provider_core.c.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/kookminlib.dir/build.make CMakeFiles/kookminlib.dir/src/provider_core.c.o
-.PHONY : src/provider_core.c.o
+src/encdec/encoder.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kookminlib.dir/build.make CMakeFiles/kookminlib.dir/src/encdec/encoder.c.o
+.PHONY : src/encdec/encoder.c.o
 
-src/provider_core.i: src/provider_core.c.i
-.PHONY : src/provider_core.i
+src/encdec/encoder.i: src/encdec/encoder.c.i
+.PHONY : src/encdec/encoder.i
 
 # target to preprocess a source file
-src/provider_core.c.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/kookminlib.dir/build.make CMakeFiles/kookminlib.dir/src/provider_core.c.i
-.PHONY : src/provider_core.c.i
+src/encdec/encoder.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kookminlib.dir/build.make CMakeFiles/kookminlib.dir/src/encdec/encoder.c.i
+.PHONY : src/encdec/encoder.c.i
 
-src/provider_core.s: src/provider_core.c.s
-.PHONY : src/provider_core.s
+src/encdec/encoder.s: src/encdec/encoder.c.s
+.PHONY : src/encdec/encoder.s
 
 # target to generate assembly for a file
-src/provider_core.c.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/kookminlib.dir/build.make CMakeFiles/kookminlib.dir/src/provider_core.c.s
-.PHONY : src/provider_core.c.s
+src/encdec/encoder.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kookminlib.dir/build.make CMakeFiles/kookminlib.dir/src/encdec/encoder.c.s
+.PHONY : src/encdec/encoder.c.s
 
-src/sig/sig_keymgmt.o: src/sig/sig_keymgmt.c.o
-.PHONY : src/sig/sig_keymgmt.o
+src/kem/kem.o: src/kem/kem.c.o
+.PHONY : src/kem/kem.o
 
 # target to build an object file
-src/sig/sig_keymgmt.c.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/kookminlib.dir/build.make CMakeFiles/kookminlib.dir/src/sig/sig_keymgmt.c.o
-.PHONY : src/sig/sig_keymgmt.c.o
+src/kem/kem.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kookminlib.dir/build.make CMakeFiles/kookminlib.dir/src/kem/kem.c.o
+.PHONY : src/kem/kem.c.o
 
-src/sig/sig_keymgmt.i: src/sig/sig_keymgmt.c.i
-.PHONY : src/sig/sig_keymgmt.i
+src/kem/kem.i: src/kem/kem.c.i
+.PHONY : src/kem/kem.i
 
 # target to preprocess a source file
-src/sig/sig_keymgmt.c.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/kookminlib.dir/build.make CMakeFiles/kookminlib.dir/src/sig/sig_keymgmt.c.i
-.PHONY : src/sig/sig_keymgmt.c.i
+src/kem/kem.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kookminlib.dir/build.make CMakeFiles/kookminlib.dir/src/kem/kem.c.i
+.PHONY : src/kem/kem.c.i
 
-src/sig/sig_keymgmt.s: src/sig/sig_keymgmt.c.s
-.PHONY : src/sig/sig_keymgmt.s
+src/kem/kem.s: src/kem/kem.c.s
+.PHONY : src/kem/kem.s
 
 # target to generate assembly for a file
-src/sig/sig_keymgmt.c.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/kookminlib.dir/build.make CMakeFiles/kookminlib.dir/src/sig/sig_keymgmt.c.s
-.PHONY : src/sig/sig_keymgmt.c.s
+src/kem/kem.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kookminlib.dir/build.make CMakeFiles/kookminlib.dir/src/kem/kem.c.s
+.PHONY : src/kem/kem.c.s
 
-src/sig/sig_ops.o: src/sig/sig_ops.c.o
-.PHONY : src/sig/sig_ops.o
+src/keymgmt.o: src/keymgmt.c.o
+.PHONY : src/keymgmt.o
 
 # target to build an object file
-src/sig/sig_ops.c.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/kookminlib.dir/build.make CMakeFiles/kookminlib.dir/src/sig/sig_ops.c.o
-.PHONY : src/sig/sig_ops.c.o
+src/keymgmt.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kookminlib.dir/build.make CMakeFiles/kookminlib.dir/src/keymgmt.c.o
+.PHONY : src/keymgmt.c.o
 
-src/sig/sig_ops.i: src/sig/sig_ops.c.i
-.PHONY : src/sig/sig_ops.i
+src/keymgmt.i: src/keymgmt.c.i
+.PHONY : src/keymgmt.i
 
 # target to preprocess a source file
-src/sig/sig_ops.c.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/kookminlib.dir/build.make CMakeFiles/kookminlib.dir/src/sig/sig_ops.c.i
-.PHONY : src/sig/sig_ops.c.i
+src/keymgmt.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kookminlib.dir/build.make CMakeFiles/kookminlib.dir/src/keymgmt.c.i
+.PHONY : src/keymgmt.c.i
 
-src/sig/sig_ops.s: src/sig/sig_ops.c.s
-.PHONY : src/sig/sig_ops.s
+src/keymgmt.s: src/keymgmt.c.s
+.PHONY : src/keymgmt.s
 
 # target to generate assembly for a file
-src/sig/sig_ops.c.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/kookminlib.dir/build.make CMakeFiles/kookminlib.dir/src/sig/sig_ops.c.s
-.PHONY : src/sig/sig_ops.c.s
+src/keymgmt.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kookminlib.dir/build.make CMakeFiles/kookminlib.dir/src/keymgmt.c.s
+.PHONY : src/keymgmt.c.s
+
+src/keys.o: src/keys.c.o
+.PHONY : src/keys.o
+
+# target to build an object file
+src/keys.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kookminlib.dir/build.make CMakeFiles/kookminlib.dir/src/keys.c.o
+.PHONY : src/keys.c.o
+
+src/keys.i: src/keys.c.i
+.PHONY : src/keys.i
+
+# target to preprocess a source file
+src/keys.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kookminlib.dir/build.make CMakeFiles/kookminlib.dir/src/keys.c.i
+.PHONY : src/keys.c.i
+
+src/keys.s: src/keys.c.s
+.PHONY : src/keys.s
+
+# target to generate assembly for a file
+src/keys.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kookminlib.dir/build.make CMakeFiles/kookminlib.dir/src/keys.c.s
+.PHONY : src/keys.c.s
+
+src/provider.o: src/provider.c.o
+.PHONY : src/provider.o
+
+# target to build an object file
+src/provider.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kookminlib.dir/build.make CMakeFiles/kookminlib.dir/src/provider.c.o
+.PHONY : src/provider.c.o
+
+src/provider.i: src/provider.c.i
+.PHONY : src/provider.i
+
+# target to preprocess a source file
+src/provider.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kookminlib.dir/build.make CMakeFiles/kookminlib.dir/src/provider.c.i
+.PHONY : src/provider.c.i
+
+src/provider.s: src/provider.c.s
+.PHONY : src/provider.s
+
+# target to generate assembly for a file
+src/provider.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kookminlib.dir/build.make CMakeFiles/kookminlib.dir/src/provider.c.s
+.PHONY : src/provider.c.s
+
+src/sig/sig.o: src/sig/sig.c.o
+.PHONY : src/sig/sig.o
+
+# target to build an object file
+src/sig/sig.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kookminlib.dir/build.make CMakeFiles/kookminlib.dir/src/sig/sig.c.o
+.PHONY : src/sig/sig.c.o
+
+src/sig/sig.i: src/sig/sig.c.i
+.PHONY : src/sig/sig.i
+
+# target to preprocess a source file
+src/sig/sig.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kookminlib.dir/build.make CMakeFiles/kookminlib.dir/src/sig/sig.c.i
+.PHONY : src/sig/sig.c.i
+
+src/sig/sig.s: src/sig/sig.c.s
+.PHONY : src/sig/sig.s
+
+# target to generate assembly for a file
+src/sig/sig.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kookminlib.dir/build.make CMakeFiles/kookminlib.dir/src/sig/sig.c.s
+.PHONY : src/sig/sig.c.s
 
 # Help Target
 help:
@@ -331,24 +403,33 @@ help:
 	@echo "... list_install_components"
 	@echo "... rebuild_cache"
 	@echo "... kookminlib"
-	@echo "... src/kem/kem_keymgmt.o"
-	@echo "... src/kem/kem_keymgmt.i"
-	@echo "... src/kem/kem_keymgmt.s"
-	@echo "... src/kem/kem_ops.o"
-	@echo "... src/kem/kem_ops.i"
-	@echo "... src/kem/kem_ops.s"
-	@echo "... src/km_util.o"
-	@echo "... src/km_util.i"
-	@echo "... src/km_util.s"
-	@echo "... src/provider_core.o"
-	@echo "... src/provider_core.i"
-	@echo "... src/provider_core.s"
-	@echo "... src/sig/sig_keymgmt.o"
-	@echo "... src/sig/sig_keymgmt.i"
-	@echo "... src/sig/sig_keymgmt.s"
-	@echo "... src/sig/sig_ops.o"
-	@echo "... src/sig/sig_ops.i"
-	@echo "... src/sig/sig_ops.s"
+	@echo "... src/bio.o"
+	@echo "... src/bio.i"
+	@echo "... src/bio.s"
+	@echo "... src/capabilities.o"
+	@echo "... src/capabilities.i"
+	@echo "... src/capabilities.s"
+	@echo "... src/encdec/decoder.o"
+	@echo "... src/encdec/decoder.i"
+	@echo "... src/encdec/decoder.s"
+	@echo "... src/encdec/encoder.o"
+	@echo "... src/encdec/encoder.i"
+	@echo "... src/encdec/encoder.s"
+	@echo "... src/kem/kem.o"
+	@echo "... src/kem/kem.i"
+	@echo "... src/kem/kem.s"
+	@echo "... src/keymgmt.o"
+	@echo "... src/keymgmt.i"
+	@echo "... src/keymgmt.s"
+	@echo "... src/keys.o"
+	@echo "... src/keys.i"
+	@echo "... src/keys.s"
+	@echo "... src/provider.o"
+	@echo "... src/provider.i"
+	@echo "... src/provider.s"
+	@echo "... src/sig/sig.o"
+	@echo "... src/sig/sig.i"
+	@echo "... src/sig/sig.s"
 .PHONY : help
 
 

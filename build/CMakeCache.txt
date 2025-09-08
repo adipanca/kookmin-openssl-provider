@@ -170,7 +170,7 @@ CMAKE_PROJECT_DESCRIPTION:STATIC=
 CMAKE_PROJECT_HOMEPAGE_URL:STATIC=
 
 //Value Computed by CMake
-CMAKE_PROJECT_NAME:STATIC=kookmin_oqs_provider
+CMAKE_PROJECT_NAME:STATIC=kookmin_lib_provider
 
 //Path to a program.
 CMAKE_RANLIB:FILEPATH=/usr/bin/ranlib
@@ -256,13 +256,13 @@ PKG_CONFIG_ARGN:STRING=
 PKG_CONFIG_EXECUTABLE:FILEPATH=PKG_CONFIG_EXECUTABLE-NOTFOUND
 
 //Value Computed by CMake
-kookmin_oqs_provider_BINARY_DIR:STATIC=/home/ubuntu/kookmin-openssl-provider/build
+kookmin_lib_provider_BINARY_DIR:STATIC=/home/ubuntu/kookmin-openssl-provider/build
 
 //Value Computed by CMake
-kookmin_oqs_provider_IS_TOP_LEVEL:STATIC=ON
+kookmin_lib_provider_IS_TOP_LEVEL:STATIC=ON
 
 //Value Computed by CMake
-kookmin_oqs_provider_SOURCE_DIR:STATIC=/home/ubuntu/kookmin-openssl-provider
+kookmin_lib_provider_SOURCE_DIR:STATIC=/home/ubuntu/kookmin-openssl-provider
 
 //Path to a file.
 liboqs_INCLUDE_DIRS:PATH=/opt/liboqs/include

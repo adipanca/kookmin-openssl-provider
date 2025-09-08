@@ -8,12 +8,15 @@ set(CMAKE_DEPENDS_LANGUAGES
 
 # The set of dependency files which are needed:
 set(CMAKE_DEPENDS_DEPENDENCY_FILES
-  "/home/ubuntu/kookmin-openssl-provider/src/kem/kem_keymgmt.c" "CMakeFiles/kookminlib.dir/src/kem/kem_keymgmt.c.o" "gcc" "CMakeFiles/kookminlib.dir/src/kem/kem_keymgmt.c.o.d"
-  "/home/ubuntu/kookmin-openssl-provider/src/kem/kem_ops.c" "CMakeFiles/kookminlib.dir/src/kem/kem_ops.c.o" "gcc" "CMakeFiles/kookminlib.dir/src/kem/kem_ops.c.o.d"
-  "/home/ubuntu/kookmin-openssl-provider/src/km_util.c" "CMakeFiles/kookminlib.dir/src/km_util.c.o" "gcc" "CMakeFiles/kookminlib.dir/src/km_util.c.o.d"
-  "/home/ubuntu/kookmin-openssl-provider/src/provider_core.c" "CMakeFiles/kookminlib.dir/src/provider_core.c.o" "gcc" "CMakeFiles/kookminlib.dir/src/provider_core.c.o.d"
-  "/home/ubuntu/kookmin-openssl-provider/src/sig/sig_keymgmt.c" "CMakeFiles/kookminlib.dir/src/sig/sig_keymgmt.c.o" "gcc" "CMakeFiles/kookminlib.dir/src/sig/sig_keymgmt.c.o.d"
-  "/home/ubuntu/kookmin-openssl-provider/src/sig/sig_ops.c" "CMakeFiles/kookminlib.dir/src/sig/sig_ops.c.o" "gcc" "CMakeFiles/kookminlib.dir/src/sig/sig_ops.c.o.d"
+  "/home/ubuntu/kookmin-openssl-provider/src/bio.c" "CMakeFiles/kookminlib.dir/src/bio.c.o" "gcc" "CMakeFiles/kookminlib.dir/src/bio.c.o.d"
+  "/home/ubuntu/kookmin-openssl-provider/src/capabilities.c" "CMakeFiles/kookminlib.dir/src/capabilities.c.o" "gcc" "CMakeFiles/kookminlib.dir/src/capabilities.c.o.d"
+  "/home/ubuntu/kookmin-openssl-provider/src/encdec/decoder.c" "CMakeFiles/kookminlib.dir/src/encdec/decoder.c.o" "gcc" "CMakeFiles/kookminlib.dir/src/encdec/decoder.c.o.d"
+  "/home/ubuntu/kookmin-openssl-provider/src/encdec/encoder.c" "CMakeFiles/kookminlib.dir/src/encdec/encoder.c.o" "gcc" "CMakeFiles/kookminlib.dir/src/encdec/encoder.c.o.d"
+  "/home/ubuntu/kookmin-openssl-provider/src/kem/kem.c" "CMakeFiles/kookminlib.dir/src/kem/kem.c.o" "gcc" "CMakeFiles/kookminlib.dir/src/kem/kem.c.o.d"
+  "/home/ubuntu/kookmin-openssl-provider/src/keymgmt.c" "CMakeFiles/kookminlib.dir/src/keymgmt.c.o" "gcc" "CMakeFiles/kookminlib.dir/src/keymgmt.c.o.d"
+  "/home/ubuntu/kookmin-openssl-provider/src/keys.c" "CMakeFiles/kookminlib.dir/src/keys.c.o" "gcc" "CMakeFiles/kookminlib.dir/src/keys.c.o.d"
+  "/home/ubuntu/kookmin-openssl-provider/src/provider.c" "CMakeFiles/kookminlib.dir/src/provider.c.o" "gcc" "CMakeFiles/kookminlib.dir/src/provider.c.o.d"
+  "/home/ubuntu/kookmin-openssl-provider/src/sig/sig.c" "CMakeFiles/kookminlib.dir/src/sig/sig.c.o" "gcc" "CMakeFiles/kookminlib.dir/src/sig/sig.c.o.d"
   )
 
 # Targets to which this target links which contain Fortran sources.

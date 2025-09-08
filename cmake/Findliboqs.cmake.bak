@@ -1,13 +1,13 @@
 find_path(liboqs_INCLUDE_DIRS
   NAMES oqs/oqs.h
-  HINTS $ENV{KM_DIR}/include ${KM_DIR}/include
+  HINTS $ENV{OQS_DIR}/include ${OQS_DIR}/include
         /usr/local/include /usr/include /opt/homebrew/include
         /opt/liboqs/include
 )
 
 find_library(liboqs_LIBRARIES
   NAMES oqs liboqs
-  HINTS $ENV{KM_DIR}/lib ${KM_DIR}/lib
+  HINTS $ENV{OQS_DIR}/lib ${OQS_DIR}/lib
         /usr/local/lib /usr/local/lib64
         /usr/lib /usr/lib64
         /usr/lib/x86_64-linux-gnu
