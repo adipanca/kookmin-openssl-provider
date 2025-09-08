@@ -29,7 +29,7 @@ add_library(kookminlib MODULE
     src/bio.c
     src/kem/kem.c
     src/keys.c
-    src/capabilities.c
+    src/readiness.c
     src/keymgmt.c
     src/provider.c
     src/encdec/encoder.c
