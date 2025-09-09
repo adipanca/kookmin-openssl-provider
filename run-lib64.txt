@@ -337,6 +337,5 @@ sudo apt-get install -y libnss3-tools
 sudo cp ca.crt /usr/local/share/ca-certificates/local-test-ca.crt
 sudo update-ca-certificates --fresh
 
-
-
+#8) coba di google chrome
 https://localhost:4433/

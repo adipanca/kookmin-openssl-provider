@@ -224,8 +224,9 @@ cmake --build build -j
 sudo cmake --install build
 # verifikasi
 ls -l /opt/openssl-master/lib/ossl-modules/kookminlib.so
+cd ~/kookmin-openssl-provider/tests
 
-#tidak boleh rename, karena ambil dari liboqs
+#(tidak boleh rename, karena ambil dari) liboqs API
 1. OQS_SIG
 2. OQS_KEM
 3. OQS_SIG_alg
@@ -246,58 +247,95 @@ ls -l /opt/openssl-master/lib/ossl-modules/kookminlib.so
 18. OQS_SIG_keypair
 
 
+
+#test kem
+==========================================================================================================
+# 1) Compile
+gcc kem_tool.c -o kem_tool -lcrypto
+
+# 2) Pastikan provider-mu bisa diload
+export OPENSSL_MODULES=/opt/openssl-master/lib/ossl-modules  # isi folder dengan kookminlib.so
+
+# 3) Generate keypair via CLI (ini sudah berhasil di kamu)
+openssl genpkey -provider kookminlib -provider default \
+  -algorithm mlkem768 -out mlkem768.key
+
+openssl pkey -provider kookminlib -provider default \
+  -in mlkem768.key -pubout -out mlkem768.pub
+
+# 4) Encap (pakai public key)
+./kem_tool encap mlkem768.pub ct.bin ss.enc.bin
+
+# 5) Decap (pakai private key)
+./kem_tool decap mlkem768.key ct.bin ss.dec.bin
+
+# 6) Cek shared secret sama
+cmp ss.enc.bin ss.dec.bin && echo "OK: shared secret match"
+
+
+
 ==========================================================================================================
 #test kem
 Coba di chrome :
 
-export OPENSSL_MODULES=/opt/openssl-master/lib64/ossl-modules    # berisi kookminlib.so
-/opt/openssl-master/bin/openssl list -kem-algorithms -provider default -provider kookminlib
+export OPENSSL_MODULES=/opt/openssl-master/lib/ossl-modules    # berisi kookminlib.so
+
+#siapkan server.cnf
+[ req ]
+distinguished_name = dn
+x509_extensions = req_ext
+prompt = no
+
+[ dn ]
+CN = localhost
+
+[ req_ext ]
+subjectAltName = @alt
+extendedKeyUsage = serverAuth
+keyUsage = digitalSignature
+basicConstraints = CA:FALSE
+
+[ alt ]
+DNS.1 = localhost
+IP.1  = 127.0.0.1
+
+#selanjutnya 
+
+sudo apt-get install -y libnss3-tools
 
 
-# contoh sangat ringkas
-openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:P-256 -days 365 \
-  -keyout ca.key -out ca.crt -nodes -subj "/CN=Local Test CA"
+# 1) Key server (ECDSA P-256, untuk tanda tangan TLS klasik)
+/opt/openssl-master/bin/openssl ecparam -name prime256v1 -genkey -noout -out server.key
 
-# CSR server -> sign pakai CA
-openssl req -new -newkey ec -pkeyopt ec_paramgen_curve:P-256 -nodes \
-  -keyout server.key -subj "/CN=localhost" -out server.csr
-openssl x509 -req -in server.csr -CA ca.crt -CAkey ca.key -CAcreateserial \
-  -out server.crt -days 365
+# 2) CSR pakai SAN dari server.cnf
+/opt/openssl-master/bin/openssl req -new -key server.key -out server.csr -config server.cnf
 
+# 3) Tanda tangani pakai CA kamu (ganti path sesuai berkas CA-mu)
+#    - Jika kamu sudah punya ca.crt/ca.key:
+/opt/openssl-master/bin/openssl x509 -req -in server.csr -CA ca.crt -CAkey ca.key -CAcreateserial \
+  -out server.crt -days 365 -sha256 -extfile server.cnf -extensions req_ext
 
+# 4) Verifikasi SAN benar:
+/opt/openssl-master/bin/openssl x509 -in server.crt -noout -text | grep -A2 "Subject Alternative Name"
 
-
-#Jalankan TLS server dengan provider
+#5) jalankan server
 /opt/openssl-master/bin/openssl s_server \
-  -cert server.crt -key server.key \
   -provider kookminlib -provider default \
   -accept 4433 -www \
-  -groups mlkem768
+  -cert server.crt -key server.key \
+  -tls1_3 -ciphersuites TLS_AES_256_GCM_SHA384 \
+  -groups X25519MLKEM768
 
-
-
-Uji koneksi dengan client (openssl s_client)
+#6) coba client
 /opt/openssl-master/bin/openssl s_client \
-  -connect localhost:4433 \
   -provider kookminlib -provider default \
-  -tls1_3 -ciphersuites TLS_AES_256_GCM_SHA384 \
-  -groups mlkem768 -msg -state -tlsextdebug
+  -connect localhost:4433 -tls1_3 \
+  -ciphersuites TLS_AES_256_GCM_SHA384 \
+  -groups X25519MLKEM768 -msg -state
 
+#7) update sertifikat
+sudo cp ca.crt /usr/local/share/ca-certificates/local-test-ca.crt
+sudo update-ca-certificates --fresh
 
-
-# jalankan server, lalu client dengan -CAfile
-/opt/openssl-master/bin/openssl s_client -connect localhost:4433 \
-  -provider kookminlib -provider default \
-  -tls1_3 -ciphersuites TLS_AES_256_GCM_SHA384 \
-  -groups mlkem768 -CAfile ca.crt
-
-
-
-google-chrome --enable-features=PostQuantumKyber
-
-
-export KMPROV=1
-
-
-KM PROV: registered mlkem768 with NID xxxx
-KM PROV: KEM encapsulate called ...
+#8) coba di google chrome
+https://localhost:4433/

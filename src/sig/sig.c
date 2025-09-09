@@ -1,11 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0 AND MIT
-
-/*
- * KM OpenSSL 3 provider
- *
- * Code strongly inspired by OpenSSL DSA signature provider.
- *
- */
+// KM OpenSSL 3 provider
 
 #include <openssl/asn1.h>
 #include <openssl/asn1t.h>
@@ -23,1386 +17,758 @@
 #include "oqs/sig.h"
 #include "provider.h"
 
-// TBD: Review what we really need/want: For now go with OSSL settings:
-#define OSSL_MAX_NAME_SIZE 50
-#define OSSL_MAX_PROPQUERY_SIZE 256 /* Property query strings */
+/* ============================================================
+ * Konstanta & Logging
+ * ============================================================ */
+#define OSSL_MAX_NAME_SIZE       50
+#define OSSL_MAX_PROPQUERY_SIZE  256
 #define COMPOSITE_OID_PREFIX_LEN 26
 
 #ifdef NDEBUG
-#define KM_SIG_PRINTF(a)
-#define KM_SIG_PRINTF2(a, b)
-#define KM_SIG_PRINTF3(a, b, c)
+#  define KMSIG_LOG0(msg)               do{}while(0)
+#  define KMSIG_LOG1(fmt,a)             do{}while(0)
+#  define KMSIG_LOG2(fmt,a,b)           do{}while(0)
 #else
-#define KM_SIG_PRINTF(a)                                                      \
-    if (getenv("KMSIG"))                                                      \
-    printf(a)
-#define KM_SIG_PRINTF2(a, b)                                                  \
-    if (getenv("KMSIG"))                                                      \
-    printf(a, b)
-#define KM_SIG_PRINTF3(a, b, c)                                               \
-    if (getenv("KMSIG"))                                                      \
-    printf(a, b, c)
-#endif // NDEBUG
+static int kmsig_log_on(void){ return getenv("KMSIG") != NULL; }
+#  define KMSIG_LOG0(msg)               do{ if(kmsig_log_on()) printf("%s",(msg)); }while(0)
+#  define KMSIG_LOG1(fmt,a)             do{ if(kmsig_log_on()) printf((fmt),(a)); }while(0)
+#  define KMSIG_LOG2(fmt,a,b)           do{ if(kmsig_log_on()) printf((fmt),(a),(b)); }while(0)
+#endif
 
-static OSSL_FUNC_signature_newctx_fn km_sig_newctx;
-static OSSL_FUNC_signature_sign_init_fn km_sig_sign_init;
-static OSSL_FUNC_signature_verify_init_fn km_sig_verify_init;
-static OSSL_FUNC_signature_sign_fn km_sig_sign;
-static OSSL_FUNC_signature_verify_fn km_sig_verify;
-static OSSL_FUNC_signature_digest_sign_init_fn km_sig_digest_sign_init;
-static OSSL_FUNC_signature_digest_sign_update_fn
-    km_sig_digest_signverify_update;
-static OSSL_FUNC_signature_digest_sign_final_fn km_sig_digest_sign_final;
-static OSSL_FUNC_signature_digest_verify_init_fn km_sig_digest_verify_init;
-static OSSL_FUNC_signature_digest_verify_update_fn
-    km_sig_digest_signverify_update;
-static OSSL_FUNC_signature_digest_verify_final_fn km_sig_digest_verify_final;
-static OSSL_FUNC_signature_freectx_fn km_sig_freectx;
-static OSSL_FUNC_signature_dupctx_fn km_sig_dupctx;
-static OSSL_FUNC_signature_get_ctx_params_fn km_sig_get_ctx_params;
-static OSSL_FUNC_signature_gettable_ctx_params_fn km_sig_gettable_ctx_params;
-static OSSL_FUNC_signature_set_ctx_params_fn km_sig_set_ctx_params;
-static OSSL_FUNC_signature_settable_ctx_params_fn km_sig_settable_ctx_params;
-static OSSL_FUNC_signature_get_ctx_md_params_fn km_sig_get_ctx_md_params;
-static OSSL_FUNC_signature_gettable_ctx_md_params_fn
-    km_sig_gettable_ctx_md_params;
-static OSSL_FUNC_signature_set_ctx_md_params_fn km_sig_set_ctx_md_params;
-static OSSL_FUNC_signature_settable_ctx_md_params_fn
-    km_sig_settable_ctx_md_params;
-
-// OIDS:
-static int get_aid(unsigned char **oidbuf, const char *tls_name) {
-    X509_ALGOR *algor = X509_ALGOR_new();
-    int aidlen = 0;
-
-    X509_ALGOR_set0(algor, OBJ_txt2obj(tls_name, 0), V_ASN1_UNDEF, NULL);
-
-    aidlen = i2d_X509_ALGOR(algor, oidbuf);
-    X509_ALGOR_free(algor);
-    return (aidlen);
-}
-
+/* ============================================================
+ * ASN.1 CompositeSignature (tetap kompatibel)
+ * ============================================================ */
 DECLARE_ASN1_FUNCTIONS(CompositeSignature)
-
-ASN1_NDEF_SEQUENCE(CompositeSignature) =
-    {
-        ASN1_SIMPLE(CompositeSignature, sig1, ASN1_BIT_STRING),
-        ASN1_SIMPLE(CompositeSignature, sig2, ASN1_BIT_STRING),
+ASN1_NDEF_SEQUENCE(CompositeSignature) = {
+    ASN1_SIMPLE(CompositeSignature, sig1, ASN1_BIT_STRING),
+    ASN1_SIMPLE(CompositeSignature, sig2, ASN1_BIT_STRING),
 } ASN1_NDEF_SEQUENCE_END(CompositeSignature)
+IMPLEMENT_ASN1_FUNCTIONS(CompositeSignature)
 
-        IMPLEMENT_ASN1_FUNCTIONS(CompositeSignature)
+/* ============================================================
+ * Forward decl OSSL hooks
+ * ============================================================ */
+static OSSL_FUNC_signature_newctx_fn                km_sig_newctx;
+static OSSL_FUNC_signature_sign_init_fn             km_sig_sign_init;
+static OSSL_FUNC_signature_verify_init_fn           km_sig_verify_init;
+static OSSL_FUNC_signature_sign_fn                  km_sig_sign;
+static OSSL_FUNC_signature_verify_fn                km_sig_verify;
+static OSSL_FUNC_signature_digest_sign_init_fn      km_sig_digest_sign_init;
+static OSSL_FUNC_signature_digest_sign_update_fn    km_sig_digest_signverify_update;
+static OSSL_FUNC_signature_digest_sign_final_fn     km_sig_digest_sign_final;
+static OSSL_FUNC_signature_digest_verify_init_fn    km_sig_digest_verify_init;
+static OSSL_FUNC_signature_digest_verify_update_fn  km_sig_digest_signverify_update;
+static OSSL_FUNC_signature_digest_verify_final_fn   km_sig_digest_verify_final;
+static OSSL_FUNC_signature_freectx_fn               km_sig_freectx;
+static OSSL_FUNC_signature_dupctx_fn                km_sig_dupctx;
+static OSSL_FUNC_signature_get_ctx_params_fn        km_sig_get_ctx_params;
+static OSSL_FUNC_signature_gettable_ctx_params_fn   km_sig_gettable_ctx_params;
+static OSSL_FUNC_signature_set_ctx_params_fn        km_sig_set_ctx_params;
+static OSSL_FUNC_signature_settable_ctx_params_fn   km_sig_settable_ctx_params;
+static OSSL_FUNC_signature_get_ctx_md_params_fn     km_sig_get_ctx_md_params;
+static OSSL_FUNC_signature_gettable_ctx_md_params_fn km_sig_gettable_ctx_md_params;
+static OSSL_FUNC_signature_set_ctx_md_params_fn     km_sig_set_ctx_md_params;
+static OSSL_FUNC_signature_settable_ctx_md_params_fn km_sig_settable_ctx_md_params;
 
-    /*
-     * What's passed as an actual key is defined by the KEYMGMT interface.
-     */
-
-    typedef struct {
+/* ============================================================
+ * Context
+ * ============================================================ */
+typedef struct {
     OSSL_LIB_CTX *libctx;
-    char *propq;
-    KMX_KEY *sig;
+    char         *propq;
+    KMX_KEY      *sig;
 
-    /*
-     * Flag to determine if the hash function can be changed (1) or not (0)
-     * Because it's dangerous to change during a DigestSign or DigestVerify
-     * operation, this flag is cleared by their Init function, and set again
-     * by their Final function.
-     */
-    unsigned int flag_allow_md : 1;
+    /* boleh ganti MD hanya sebelum ada data */
+    unsigned int  flag_allow_md : 1;
 
-    char mdname[OSSL_MAX_NAME_SIZE];
+    char          mdname[OSSL_MAX_NAME_SIZE];
+    unsigned char *aid;      /* AlgorithmIdentifier terenkode DER */
+    size_t         aid_len;
 
-    /* The Algorithm Identifier of the combined signature algorithm */
-    unsigned char *aid;
-    size_t aid_len;
-
-    /* main digest */
-    EVP_MD *md;
+    EVP_MD     *md;
     EVP_MD_CTX *mdctx;
-    size_t mdsize;
-    // for collecting data if no MD is active:
+
+    /* buffer collector saat tanpa MD streaming */
     unsigned char *mddata;
-    int operation;
+    size_t         mdsize;
+
+    int            operation; /* EVP_PKEY_OP_SIGN / VERIFY */
 } PROV_KMSIG_CTX;
 
-static void *km_sig_newctx(void *provctx, const char *propq) {
-    PROV_KMSIG_CTX *pkm_sigctx;
-
-    KM_SIG_PRINTF2("KM SIG provider: newctx called with propq %s\n", propq);
-
-    pkm_sigctx = OPENSSL_zalloc(sizeof(PROV_KMSIG_CTX));
-    if (pkm_sigctx == NULL)
-        return NULL;
-
-    pkm_sigctx->libctx = ((PROV_KM_CTX *)provctx)->libctx;
-    if (propq != NULL && (pkm_sigctx->propq = OPENSSL_strdup(propq)) == NULL) {
-        OPENSSL_free(pkm_sigctx);
-        pkm_sigctx = NULL;
-        ERR_raise(ERR_LIB_USER, ERR_R_MALLOC_FAILURE);
-    }
-    return pkm_sigctx;
+/* ============================================================
+ * OID / util
+ * ============================================================ */
+static int get_aid(unsigned char **oidbuf, const char *tls_name) {
+    X509_ALGOR *alg = X509_ALGOR_new();
+    if (!alg) return 0;
+    X509_ALGOR_set0(alg, OBJ_txt2obj(tls_name, 0), V_ASN1_UNDEF, NULL);
+    int len = i2d_X509_ALGOR(alg, oidbuf);
+    X509_ALGOR_free(alg);
+    return len;
 }
 
-static int km_sig_setup_md(PROV_KMSIG_CTX *ctx, const char *mdname,
-                            const char *mdprops) {
-    KM_SIG_PRINTF3("KM SIG provider: setup_md called for MD %s (alg %s)\n",
-                    mdname, ctx->sig->tls_name);
-    if (mdprops == NULL)
-        mdprops = ctx->propq;
+/* daftar OID prefix untuk composite — urutan dipertahankan */
+static const unsigned char *composite_OID_prefix[] = {
+    (const unsigned char *)"060B6086480186FA6B50080101", /* mldsa44_pss2048 */
+    (const unsigned char *)"060B6086480186FA6B50080102", /* mldsa44_rsa2048 */
+    (const unsigned char *)"060B6086480186FA6B50080103", /* mldsa44_ed25519 */
+    (const unsigned char *)"060B6086480186FA6B50080104", /* mldsa44_p256 */
+    (const unsigned char *)"060B6086480186FA6B50080105", /* mldsa44_bp256 */
+    (const unsigned char *)"060B6086480186FA6B50080106", /* mldsa65_pss3072 */
+    (const unsigned char *)"060B6086480186FA6B50080107", /* mldsa65_rsa3072 */
+    (const unsigned char *)"060B6086480186FA6B50080108", /* mldsa65_p256 */
+    (const unsigned char *)"060B6086480186FA6B50080109", /* mldsa65_bp256 */
+    (const unsigned char *)"060B6086480186FA6B5008010A", /* mldsa65_ed25519 */
+    (const unsigned char *)"060B6086480186FA6B5008010B", /* mldsa87_p384 */
+    (const unsigned char *)"060B6086480186FA6B5008010C", /* mldsa87_bp384 */
+    (const unsigned char *)"060B6086480186FA6B5008010D", /* mldsa87_ed448 */
+    (const unsigned char *)"060B6086480186FA6B5008010E", /* falcon512_p256 */
+    (const unsigned char *)"060B6086480186FA6B5008010F", /* falcon512_bp256 */
+    (const unsigned char *)"060B6086480186FA6B50080110", /* falcon512_ed25519 */
+};
 
-    if (mdname != NULL) {
-        EVP_MD *md = EVP_MD_fetch(ctx->libctx, mdname, mdprops);
-
-        if ((md == NULL) || (EVP_MD_nid(md) == NID_undef)) {
-            if (md == NULL)
-                ERR_raise_data(ERR_LIB_USER, KMPROV_R_INVALID_DIGEST,
-                               "%s could not be fetched", mdname);
-            EVP_MD_free(md);
-            return 0;
-        }
-
-        EVP_MD_CTX_free(ctx->mdctx);
-        ctx->mdctx = NULL;
-        EVP_MD_free(ctx->md);
-        ctx->md = NULL;
-
-        if (ctx->aid)
-            OPENSSL_free(ctx->aid);
-        ctx->aid = NULL; // ensure next function allocates memory
-        ctx->aid_len = get_aid(&(ctx->aid), ctx->sig->tls_name);
-
-        ctx->md = md;
-        OPENSSL_strlcpy(ctx->mdname, mdname, sizeof(ctx->mdname));
+static void hex_prefix_to_bin(unsigned char *out, const unsigned char *hex) {
+    for (int i = 0; i < COMPOSITE_OID_PREFIX_LEN/2; i++) {
+        int hi = OPENSSL_hexchar2int(hex[2*i]);
+        int lo = OPENSSL_hexchar2int(hex[2*i+1]);
+        out[i] = (unsigned char)((hi<<4) | lo);
     }
+}
+
+/* pilih digest klasik berdasarkan level PQ */
+static const EVP_MD *select_classical_md(const OQS_SIG *pq_sig, int *out_len) {
+    switch (pq_sig->claimed_nist_level) {
+        case 1: *out_len = SHA256_DIGEST_LENGTH; return EVP_sha256();
+        case 2:
+        case 3: *out_len = SHA384_DIGEST_LENGTH; return EVP_sha384();
+        case 4:
+        case 5:
+        default: *out_len = SHA512_DIGEST_LENGTH; return EVP_sha512();
+    }
+}
+
+/* set padding RSA/RSASSA-PSS sesuai nama TLS (pss2048/pss3072) */
+static int setup_rsa_padding(EVP_PKEY_CTX *pctx, int is_pss, const char *name) {
+    if (!is_pss)
+        return EVP_PKEY_CTX_set_rsa_padding(pctx, RSA_PKCS1_PADDING) > 0;
+
+    int salt = 0;
+    const EVP_MD *mgf1 = NULL;
+    if (!strncmp(name, "pss3072", 7)) { salt = 64; mgf1 = EVP_sha512(); }
+    else if (!strncmp(name, "pss2048", 7)) { salt = 32; mgf1 = EVP_sha256(); }
+    else return 0;
+
+    return EVP_PKEY_CTX_set_rsa_padding(pctx, RSA_PKCS1_PSS_PADDING) > 0
+        && EVP_PKEY_CTX_set_rsa_pss_saltlen(pctx, salt) > 0
+        && EVP_PKEY_CTX_set_rsa_mgf1_md(pctx, mgf1) > 0;
+}
+
+/* siapkan prehash untuk composite: prefix OID + hash(TBS) */
+static unsigned char *make_composite_prehash(const unsigned char *oid_hex_prefix,
+                                             const unsigned char *tbs, size_t tbslen,
+                                             size_t *out_len, int sha512_mode) {
+    int hlen = sha512_mode ? SHA512_DIGEST_LENGTH : SHA256_DIGEST_LENGTH;
+    *out_len = (COMPOSITE_OID_PREFIX_LEN/2) + hlen;
+
+    unsigned char *buf = OPENSSL_malloc(*out_len);
+    if (!buf) return NULL;
+
+    hex_prefix_to_bin(buf, oid_hex_prefix);
+
+    unsigned char *hptr = buf + (COMPOSITE_OID_PREFIX_LEN/2);
+    if (sha512_mode) SHA512(tbs, tbslen, hptr);
+    else             SHA256(tbs, tbslen, hptr);
+
+    return buf;
+}
+
+/* ============================================================
+ * Ctx helpers
+ * ============================================================ */
+static int km_sig_setup_md(PROV_KMSIG_CTX *ctx, const char *mdname, const char *mdprops) {
+    KMSIG_LOG2("setup_md: %s (alg=%s)\n", mdname ? mdname : "(null)", ctx->sig ? ctx->sig->tls_name : "(nil)");
+    if (mdprops == NULL) mdprops = ctx->propq;
+    if (!mdname) return 1;
+
+    EVP_MD *md = EVP_MD_fetch(ctx->libctx, mdname, mdprops);
+    if (!md || EVP_MD_nid(md) == NID_undef) {
+        if (!md) ERR_raise_data(ERR_LIB_USER, KMPROV_R_INVALID_DIGEST, "%s could not be fetched", mdname);
+        EVP_MD_free(md);
+        return 0;
+    }
+
+    EVP_MD_CTX_free(ctx->mdctx);  ctx->mdctx = NULL;
+    EVP_MD_free(ctx->md);         ctx->md    = NULL;
+
+    OPENSSL_free(ctx->aid);       ctx->aid   = NULL;
+    ctx->aid_len = get_aid(&ctx->aid, ctx->sig->tls_name);
+
+    ctx->md = md;
+    OPENSSL_strlcpy(ctx->mdname, mdname, sizeof(ctx->mdname));
     return 1;
 }
 
-static int km_sig_signverify_init(void *vpkm_sigctx, void *vkmsig,
-                                   int operation) {
-    PROV_KMSIG_CTX *pkm_sigctx = (PROV_KMSIG_CTX *)vpkm_sigctx;
+static int km_sig_signverify_init_common(void *vctx, void *vkey, int op) {
+    PROV_KMSIG_CTX *c = (PROV_KMSIG_CTX *)vctx;
+    if (!c || !vkey || !kmx_key_up_ref(vkey)) return 0;
+    kmx_key_free(c->sig);
+    c->sig = (KMX_KEY *)vkey;
+    c->operation = op;
+    c->flag_allow_md = 1;
 
-    KM_SIG_PRINTF("KM SIG provider: signverify_init called\n");
-    if (pkm_sigctx == NULL || vkmsig == NULL || !kmx_key_up_ref(vkmsig))
-        return 0;
-    kmx_key_free(pkm_sigctx->sig);
-    pkm_sigctx->sig = vkmsig;
-    pkm_sigctx->operation = operation;
-    pkm_sigctx->flag_allow_md = 1; /* change permitted until first use */
-    if ((operation == EVP_PKEY_OP_SIGN && !pkm_sigctx->sig->privkey) ||
-        (operation == EVP_PKEY_OP_VERIFY && !pkm_sigctx->sig->pubkey)) {
+    if ((op == EVP_PKEY_OP_SIGN   && !c->sig->privkey) ||
+        (op == EVP_PKEY_OP_VERIFY && !c->sig->pubkey)) {
         ERR_raise(ERR_LIB_USER, KMPROV_R_INVALID_KEY);
         return 0;
     }
     return 1;
 }
 
-static int km_sig_sign_init(void *vpkm_sigctx, void *vkmsig,
-                             const OSSL_PARAM params[]) {
-    KM_SIG_PRINTF("KM SIG provider: sign_init called\n");
-    return km_sig_signverify_init(vpkm_sigctx, vkmsig, EVP_PKEY_OP_SIGN);
+/* ============================================================
+ * NEWCTX / DUP / FREE
+ * ============================================================ */
+static void *km_sig_newctx(void *provctx, const char *propq) {
+    PROV_KMSIG_CTX *c = OPENSSL_zalloc(sizeof(*c));
+    KMSIG_LOG1("newctx propq=%s\n", propq ? propq : "(null)");
+    if (!c) return NULL;
+
+    c->libctx = ((PROV_KM_CTX *)provctx)->libctx;
+    if (propq) {
+        c->propq = OPENSSL_strdup(propq);
+        if (!c->propq) { OPENSSL_free(c); ERR_raise(ERR_LIB_USER, ERR_R_MALLOC_FAILURE); return NULL; }
+    }
+    return c;
 }
 
-static int km_sig_verify_init(void *vpkm_sigctx, void *vkmsig,
-                               const OSSL_PARAM params[]) {
-    KM_SIG_PRINTF("KM SIG provider: verify_init called\n");
-    return km_sig_signverify_init(vpkm_sigctx, vkmsig, EVP_PKEY_OP_VERIFY);
+static void km_sig_freectx(void *vctx) {
+    PROV_KMSIG_CTX *c = (PROV_KMSIG_CTX *)vctx;
+    if (!c) return;
+    KMSIG_LOG0("freectx\n");
+    OPENSSL_free(c->propq);
+    EVP_MD_CTX_free(c->mdctx);
+    EVP_MD_free(c->md);
+    kmx_key_free(c->sig);
+    OPENSSL_free(c->mddata);
+    OPENSSL_free(c->aid);
+    OPENSSL_free(c);
 }
 
-// this list need to be in order of the last number on the OID from the
-// composite, the len of each value is COMPOSITE_OID_PREFIX_LEN
-static const unsigned char *composite_OID_prefix[] = {
-    /*
-     * mldsa44_pss2048
-     * id-MLDSA44-RSA2048-PSS-SHA256
-     */
-    (const unsigned char *)"060B6086480186FA6B50080101",
+static void *km_sig_dupctx(void *vctx) {
+    PROV_KMSIG_CTX *src = (PROV_KMSIG_CTX *)vctx;
+    PROV_KMSIG_CTX *dst = OPENSSL_zalloc(sizeof(*dst));
+    KMSIG_LOG0("dupctx\n");
+    if (!dst) return NULL;
 
-    /*
-     * mldsa44_rsa2048
-     * id-MLDSA44-RSA2048-PKCS15-SHA256
-     */
-    (const unsigned char *)"060B6086480186FA6B50080102",
+    *dst = *src;
+    dst->sig = NULL; dst->md = NULL; dst->mdctx = NULL; dst->propq = NULL; dst->aid = NULL; dst->mddata = NULL;
 
-    /*
-     * mldsa44_ed25519
-     * id-MLDSA44-Ed25519-SHA512
-     */
-    (const unsigned char *)"060B6086480186FA6B50080103",
+    if (src->sig && !kmx_key_up_ref(src->sig)) goto err;
+    dst->sig = src->sig;
 
-    /*
-     * mldsa44_p256
-     * id-MLDSA44-ECDSA-P256-SHA256
-     */
-    (const unsigned char *)"060B6086480186FA6B50080104",
+    if (src->md && !EVP_MD_up_ref(src->md)) goto err;
+    dst->md = src->md;
 
-    /*
-     * mldsa44_bp256
-     * id-MLDSA44-ECDSA-brainpoolP256r1-SHA256
-     */
-    (const unsigned char *)"060B6086480186FA6B50080105",
-
-    /*
-     * mldsa65_pss3072
-     * id-MLDSA65-RSA3072-PSS-SHA512
-     */
-    (const unsigned char *)"060B6086480186FA6B50080106",
-
-    /*
-     * mldsa65_rsa3072
-     * id-MLDSA65-RSA3072-PKCS15-SHA512
-     */
-    (const unsigned char *)"060B6086480186FA6B50080107",
-
-    /*
-     * mldsa65_p256
-     * id-MLDSA65-ECDSA-P256-SHA512
-     */
-    (const unsigned char *)"060B6086480186FA6B50080108",
-
-    /*
-     * mldsa65_bp256
-     * id-MLDSA65-ECDSA-brainpoolP256r1-SHA512
-     */
-    (const unsigned char *)"060B6086480186FA6B50080109",
-
-    /*
-     * mldsa65_ed25519
-     * id-MLDSA65-Ed25519-SHA512
-     */
-    (const unsigned char *)"060B6086480186FA6B5008010A",
-
-    /*
-     * mldsa87_p384
-     * id-MLDSA87-ECDSA-P384-SHA512
-     */
-    (const unsigned char *)"060B6086480186FA6B5008010B",
-
-    /*
-     * mldsa87_bp384
-     * id-MLDSA87-ECDSA-brainpoolP384r1-SHA512
-     */
-    (const unsigned char *)"060B6086480186FA6B5008010C",
-
-    /*
-     * mldsa87_ed448
-     * id-MLDSA87-Ed448-SHA512
-     */
-    (const unsigned char *)"060B6086480186FA6B5008010D",
-
-    /*
-     * falcon512_p256
-     * id-Falon512-ECDSA-P256-SHA256
-     */
-    (const unsigned char *)"060B6086480186FA6B5008010E",
-
-    /*
-     * falcon512_p256
-     * id-Falcon512-ECDSA-brainpoolP256r1-SHA256
-     */
-    (const unsigned char *)"060B6086480186FA6B5008010F",
-
-    /*
-     * falcon512_ed25519
-     * id-Falcon512-Ed25519-SHA512
-     */
-    (const unsigned char *)"060B6086480186FA6B50080110",
-};
-
-/*put the chars on in into memory on out*/
-void composite_prefix_conversion(char *out, const unsigned char *in) {
-    int temp;
-    for (int i = 0; i < COMPOSITE_OID_PREFIX_LEN / 2; i++) {
-        temp = OPENSSL_hexchar2int(in[2 * i]);
-        temp = temp * 16;
-        temp += OPENSSL_hexchar2int(in[2 * i + 1]);
-        out[i] = (unsigned char)temp;
-    }
-}
-
-/* On entry to this function, data to be signed (tbs) might have been hashed
- * already: this would be the case if pkm_sigctx->mdctx != NULL; if that is
- * NULL, we have to hash in case of hybrid signatures
- */
-static int km_sig_sign(void *vpkm_sigctx, unsigned char *sig, size_t *siglen,
-                        size_t sigsize, const unsigned char *tbs,
-                        size_t tbslen) {
-    PROV_KMSIG_CTX *pkm_sigctx = (PROV_KMSIG_CTX *)vpkm_sigctx;
-    KMX_KEY *kmxkey = pkm_sigctx->sig;
-    OQS_SIG *km_key = pkm_sigctx->sig->kmx_provider_ctx.kmx_qs_ctx.sig;
-    EVP_PKEY *km_key_classic = NULL;
-    EVP_PKEY *cmp_key_classic = NULL;
-    EVP_PKEY *evpkey = kmxkey->classical_pkey;
-    EVP_PKEY_CTX *classical_ctx_sign = NULL;
-
-    KM_SIG_PRINTF2("KM SIG provider: sign called for %ld bytes\n", tbslen);
-
-    int is_hybrid = (kmxkey->keytype == KEY_TYPE_HYB_SIG);
-    int is_composite = (kmxkey->keytype == KEY_TYPE_CMP_SIG);
-    size_t max_sig_len = 0;
-    size_t classical_sig_len = 0, km_sig_len = 0;
-    size_t actual_classical_sig_len = 0;
-    size_t index = 0;
-    int rv = 0;
-
-    if (!kmxkey || !(km_key || km_key_classic) || !kmxkey->privkey) {
-        ERR_raise(ERR_LIB_USER, KMPROV_R_NO_PRIVATE_KEY);
-        return rv;
+    if (src->mdctx) {
+        dst->mdctx = EVP_MD_CTX_new();
+        if (!dst->mdctx || !EVP_MD_CTX_copy_ex(dst->mdctx, src->mdctx)) goto err;
     }
 
-    if (is_composite) {
-        max_sig_len = kmx_key_maxsize(kmxkey);
-    } else {
-        max_sig_len += km_key->length_signature;
+    if (src->mddata) {
+        dst->mddata = OPENSSL_memdup(src->mddata, src->mdsize);
+        if (!dst->mddata) goto err;
+        dst->mdsize = src->mdsize;
     }
 
-    if (is_hybrid) {
-        actual_classical_sig_len = kmxkey->evp_info->length_signature;
-        max_sig_len += (SIZE_OF_UINT32 + actual_classical_sig_len);
+    if (src->aid) {
+        dst->aid = OPENSSL_memdup(src->aid, src->aid_len);
+        if (!dst->aid) goto err;
+        dst->aid_len = src->aid_len;
     }
 
-    if (sig == NULL) {
-        *siglen = max_sig_len;
-        KM_SIG_PRINTF2("KM SIG provider: sign test returning size %ld\n",
-                        *siglen);
-        return 1;
+    if (src->propq) {
+        dst->propq = OPENSSL_strdup(src->propq);
+        if (!dst->propq) goto err;
     }
-    if (*siglen < max_sig_len) {
-        ERR_raise(ERR_LIB_USER, KMPROV_R_BUFFER_LENGTH_WRONG);
-        return rv;
-    }
+    return dst;
 
-    if (is_hybrid) {
-        if ((classical_ctx_sign = EVP_PKEY_CTX_new(evpkey, NULL)) == NULL ||
-            EVP_PKEY_sign_init(classical_ctx_sign) <= 0) {
-            ERR_raise(ERR_LIB_USER, ERR_R_FATAL);
-            goto endsign;
-        }
-        if (kmxkey->evp_info->keytype == EVP_PKEY_RSA) {
-            if (EVP_PKEY_CTX_set_rsa_padding(classical_ctx_sign,
-                                             RSA_PKCS1_PADDING) <= 0) {
-                ERR_raise(ERR_LIB_USER, ERR_R_FATAL);
-                goto endsign;
-            }
-        }
-
-        /* unconditionally hash to be in line with km-openssl111:
-         * uncomment the following line if using pre-performed hash:
-         * if (pkm_sigctx->mdctx == NULL) { // hashing not yet done
-         */
-        const EVP_MD *classical_md;
-        int digest_len;
-        unsigned char digest[SHA512_DIGEST_LENGTH]; /* init with max length */
-
-        /* classical schemes can't sign arbitrarily large data; we hash it
-         * first
-         */
-        switch (km_key->claimed_nist_level) {
-        case 1:
-            classical_md = EVP_sha256();
-            digest_len = SHA256_DIGEST_LENGTH;
-            SHA256(tbs, tbslen, (unsigned char *)&digest);
-            break;
-        case 2:
-        case 3:
-            classical_md = EVP_sha384();
-            digest_len = SHA384_DIGEST_LENGTH;
-            SHA384(tbs, tbslen, (unsigned char *)&digest);
-            break;
-        case 4:
-        case 5:
-        default:
-            classical_md = EVP_sha512();
-            digest_len = SHA512_DIGEST_LENGTH;
-            SHA512(tbs, tbslen, (unsigned char *)&digest);
-            break;
-        }
-        if ((EVP_PKEY_CTX_set_signature_md(classical_ctx_sign, classical_md) <=
-             0) ||
-            (EVP_PKEY_sign(classical_ctx_sign, sig + SIZE_OF_UINT32,
-                           &actual_classical_sig_len, digest,
-                           digest_len) <= 0)) {
-            ERR_raise(ERR_LIB_USER, ERR_R_FATAL);
-            goto endsign;
-        }
-        /* activate in case we want to use pre-performed hashes:
-         * }
-         * else { // hashing done before; just sign:
-         *     if (EVP_PKEY_sign(classical_ctx_sign, sig + SIZE_OF_UINT32,
-         * &actual_classical_sig_len, tbs, tbslen) <= 0) {
-         *       ERR_raise(ERR_LIB_USER, KMPROV_R_SIGNING_FAILED);
-         *       goto endsign;
-         *     }
-         *  }
-         */
-        if (actual_classical_sig_len > kmxkey->evp_info->length_signature) {
-            /* sig is bigger than expected */
-            ERR_raise(ERR_LIB_USER, KMPROV_R_BUFFER_LENGTH_WRONG);
-            goto endsign;
-        }
-        ENCODE_UINT32(sig, actual_classical_sig_len);
-        classical_sig_len = SIZE_OF_UINT32 + actual_classical_sig_len;
-        index += classical_sig_len;
-    }
-
-    if (is_composite) {
-        unsigned char *buf;
-        int i;
-        int nid = OBJ_sn2nid(kmxkey->tls_name);
-        int comp_idx = get_composite_idx(get_kmalg_idx(nid));
-        if (comp_idx == -1)
-            goto endsign;
-        const unsigned char *oid_prefix = composite_OID_prefix[comp_idx - 1];
-        char *final_tbs;
-        CompositeSignature *compsig = CompositeSignature_new();
-        size_t final_tbslen = COMPOSITE_OID_PREFIX_LEN /
-                              2; // COMPOSITE_OID_PREFIX_LEN stores the size of
-                                 // the *char, but the prefix will be on memory,
-                                 // so each 2 chars will translate into one byte
-        int aux = 0;
-        unsigned char *tbs_hash;
-
-        // prepare the pre hash
-        for (i = 0; i < kmxkey->numkeys; i++) {
-            char *name;
-            char *upcase_name;
-            if ((name = get_cmpname(nid, i)) == NULL) {
-                ERR_raise(ERR_LIB_USER, ERR_R_FATAL);
-                CompositeSignature_free(compsig);
-                goto endsign;
-            }
-            upcase_name = get_kmname_fromtls(name);
-
-            if ((upcase_name != 0) &&
-                    ((!strcmp(upcase_name, OQS_SIG_alg_ml_dsa_65)) ||
-                     (!strcmp(upcase_name, OQS_SIG_alg_ml_dsa_87))) ||
-                (name[0] == 'e')) {
-                aux = 1;
-                OPENSSL_free(name);
-                break;
-            }
-            OPENSSL_free(name);
-        }
-        switch (aux) {
-        case 0:
-            tbs_hash = OPENSSL_malloc(SHA256_DIGEST_LENGTH);
-            SHA256(tbs, tbslen, tbs_hash);
-            final_tbslen += SHA256_DIGEST_LENGTH;
-            break;
-        case 1:
-            tbs_hash = OPENSSL_malloc(SHA512_DIGEST_LENGTH);
-            SHA512(tbs, tbslen, tbs_hash);
-            final_tbslen += SHA512_DIGEST_LENGTH;
-            break;
-        default:
-            ERR_raise(ERR_LIB_USER, ERR_R_FATAL);
-            CompositeSignature_free(compsig);
-            goto endsign;
-        }
-        final_tbs = OPENSSL_malloc(final_tbslen);
-        composite_prefix_conversion(final_tbs, oid_prefix);
-        memcpy(final_tbs + COMPOSITE_OID_PREFIX_LEN / 2, tbs_hash,
-               final_tbslen - COMPOSITE_OID_PREFIX_LEN / 2);
-        OPENSSL_free(tbs_hash);
-
-        // sign
-        for (i = 0; i < kmxkey->numkeys; i++) {
-            char *name;
-            if ((name = get_cmpname(nid, i)) == NULL) {
-                ERR_raise(ERR_LIB_USER, ERR_R_FATAL);
-                CompositeSignature_free(compsig);
-                OPENSSL_free(final_tbs);
-                goto endsign;
-            }
-
-            if (get_kmname_fromtls(name)) { // PQC signing
-                km_sig_len = kmxkey->kmx_provider_ctx.kmx_qs_ctx.sig
-                                  ->length_signature;
-                buf = OPENSSL_malloc(km_sig_len);
-                if (OQS_SIG_sign(km_key, buf, &km_sig_len,
-                                 (const unsigned char *)final_tbs, final_tbslen,
-                                 kmxkey->comp_privkey[i]) != OQS_SUCCESS) {
-                    ERR_raise(ERR_LIB_USER, KMPROV_R_SIGNING_FAILED);
-                    CompositeSignature_free(compsig);
-                    OPENSSL_free(final_tbs);
-                    OPENSSL_free(name);
-                    OPENSSL_free(buf);
-                    goto endsign;
-                }
-            } else { // sign non PQC key on km_key
-                km_key_classic = kmxkey->classical_pkey;
-                km_sig_len = kmxkey->kmx_provider_ctx.kmx_evp_ctx->evp_info
-                                  ->length_signature;
-                buf = OPENSSL_malloc(km_sig_len);
-                const EVP_MD *classical_md;
-                int digest_len;
-                unsigned char digest[SHA512_DIGEST_LENGTH]; /* init with max
-                                                               length */
-
-                if (name[0] == 'e') { // ed25519 or ed448
-                    EVP_MD_CTX *evp_ctx = EVP_MD_CTX_new();
-                    if ((EVP_DigestSignInit(evp_ctx, NULL, NULL, NULL,
-                                            km_key_classic) <= 0) ||
-                        (EVP_DigestSign(evp_ctx, buf, &km_sig_len,
-                                        (const unsigned char *)final_tbs,
-                                        final_tbslen) <= 0)) {
-                        ERR_raise(ERR_LIB_USER, ERR_R_FATAL);
-                        CompositeSignature_free(compsig);
-                        OPENSSL_free(final_tbs);
-                        OPENSSL_free(name);
-                        EVP_MD_CTX_free(evp_ctx);
-                        OPENSSL_free(buf);
-                        goto endsign;
-                    }
-                    EVP_MD_CTX_free(evp_ctx);
-                } else {
-                    if ((classical_ctx_sign =
-                             EVP_PKEY_CTX_new(km_key_classic, NULL)) == NULL ||
-                        (EVP_PKEY_sign_init(classical_ctx_sign) <= 0)) {
-                        ERR_raise(ERR_LIB_USER, ERR_R_FATAL);
-                        CompositeSignature_free(compsig);
-                        OPENSSL_free(final_tbs);
-                        OPENSSL_free(name);
-                        OPENSSL_free(buf);
-                        goto endsign;
-                    }
-
-                    if (!strncmp(name, "pss", 3)) {
-                        int salt;
-                        const EVP_MD *pss_mgf1;
-                        if (!strncmp(name, "pss3072", 7)) {
-                            salt = 64;
-                            pss_mgf1 = EVP_sha512();
-                        } else {
-                            if (!strncmp(name, "pss2048", 7)) {
-                                salt = 32;
-                                pss_mgf1 = EVP_sha256();
-                            } else {
-                                ERR_raise(ERR_LIB_USER, ERR_R_FATAL);
-                                CompositeSignature_free(compsig);
-                                OPENSSL_free(final_tbs);
-                                OPENSSL_free(name);
-                                OPENSSL_free(buf);
-                                goto endsign;
-                            }
-                        }
-                        if ((EVP_PKEY_CTX_set_rsa_padding(
-                                 classical_ctx_sign, RSA_PKCS1_PSS_PADDING) <=
-                             0) ||
-                            (EVP_PKEY_CTX_set_rsa_pss_saltlen(
-                                 classical_ctx_sign, salt) <= 0) ||
-                            (EVP_PKEY_CTX_set_rsa_mgf1_md(classical_ctx_sign,
-                                                          pss_mgf1) <= 0)) {
-                            ERR_raise(ERR_LIB_USER, ERR_R_FATAL);
-                            CompositeSignature_free(compsig);
-                            OPENSSL_free(final_tbs);
-                            OPENSSL_free(name);
-                            OPENSSL_free(buf);
-                            goto endsign;
-                        }
-                    } else if (kmxkey->kmx_provider_ctx.kmx_evp_ctx->evp_info
-                                   ->keytype == EVP_PKEY_RSA) {
-                        if (EVP_PKEY_CTX_set_rsa_padding(
-                                classical_ctx_sign, RSA_PKCS1_PADDING) <= 0) {
-                            ERR_raise(ERR_LIB_USER, ERR_R_FATAL);
-                            CompositeSignature_free(compsig);
-                            OPENSSL_free(final_tbs);
-                            OPENSSL_free(name);
-                            OPENSSL_free(buf);
-                            goto endsign;
-                        }
-                    }
-                    if (comp_idx < 6) {
-                        classical_md = EVP_sha256();
-                        digest_len = SHA256_DIGEST_LENGTH;
-                        SHA256((const unsigned char *)final_tbs, final_tbslen,
-                               (unsigned char *)&digest);
-                    } else {
-                        classical_md = EVP_sha512();
-                        digest_len = SHA512_DIGEST_LENGTH;
-                        SHA512((const unsigned char *)final_tbs, final_tbslen,
-                               (unsigned char *)&digest);
-                    }
-
-                    if ((EVP_PKEY_CTX_set_signature_md(classical_ctx_sign,
-                                                       classical_md) <= 0) ||
-                        (EVP_PKEY_sign(classical_ctx_sign, buf, &km_sig_len,
-                                       digest, digest_len) <= 0)) {
-                        ERR_raise(ERR_LIB_USER, ERR_R_FATAL);
-                        CompositeSignature_free(compsig);
-                        OPENSSL_free(final_tbs);
-                        OPENSSL_free(name);
-                        OPENSSL_free(buf);
-                        goto endsign;
-                    }
-
-                    if (km_sig_len > kmxkey->kmx_provider_ctx.kmx_evp_ctx
-                                          ->evp_info->length_signature) {
-                        /* sig is bigger than expected */
-                        ERR_raise(ERR_LIB_USER, KMPROV_R_BUFFER_LENGTH_WRONG);
-                        CompositeSignature_free(compsig);
-                        OPENSSL_free(final_tbs);
-                        OPENSSL_free(name);
-                        OPENSSL_free(buf);
-                        goto endsign;
-                    }
-                }
-            }
-
-            if (i == 0) {
-                compsig->sig1->data = OPENSSL_memdup(buf, km_sig_len);
-                compsig->sig1->length = km_sig_len;
-                compsig->sig1->flags =
-                    8; // set as 8 to not check for unused bits
-            } else {
-                compsig->sig2->data = OPENSSL_memdup(buf, km_sig_len);
-                compsig->sig2->length = km_sig_len;
-                compsig->sig2->flags =
-                    8; // set as 8 to not check for unused bits
-            }
-
-            OPENSSL_free(buf);
-            OPENSSL_free(name);
-        }
-        km_sig_len = i2d_CompositeSignature(compsig, &sig);
-
-        CompositeSignature_free(compsig);
-        OPENSSL_free(final_tbs);
-    } else if (OQS_SIG_sign(km_key, sig + index, &km_sig_len, tbs, tbslen,
-                            kmxkey->comp_privkey[kmxkey->numkeys - 1]) !=
-               OQS_SUCCESS) {
-        ERR_raise(ERR_LIB_USER, KMPROV_R_SIGNING_FAILED);
-        goto endsign;
-    }
-
-    *siglen = classical_sig_len + km_sig_len;
-    KM_SIG_PRINTF2("KM SIG provider: signing completes with size %ld\n",
-                    *siglen);
-    rv = 1; /* success */
-
-endsign:
-    if (classical_ctx_sign) {
-        EVP_PKEY_CTX_free(classical_ctx_sign);
-    }
-    return rv;
-}
-
-static int km_sig_verify(void *vpkm_sigctx, const unsigned char *sig,
-                          size_t siglen, const unsigned char *tbs,
-                          size_t tbslen) {
-    PROV_KMSIG_CTX *pkm_sigctx = (PROV_KMSIG_CTX *)vpkm_sigctx;
-    KMX_KEY *kmxkey = pkm_sigctx->sig;
-    OQS_SIG *km_key = pkm_sigctx->sig->kmx_provider_ctx.kmx_qs_ctx.sig;
-    EVP_PKEY *evpkey = kmxkey->classical_pkey;
-    EVP_PKEY_CTX *classical_ctx_sign = NULL;
-    EVP_PKEY_CTX *ctx_verify = NULL;
-    int is_hybrid = (kmxkey->keytype == KEY_TYPE_HYB_SIG);
-    int is_composite = (kmxkey->keytype == KEY_TYPE_CMP_SIG);
-    size_t classical_sig_len = 0, km_sig_len = 0;
-    size_t index = 0;
-    int rv = 0;
-    ASN1_BIT_STRING *comp_sig;
-
-    KM_SIG_PRINTF3("KM SIG provider: verify called with siglen %ld bytes and "
-                    "tbslen %ld\n",
-                    siglen, tbslen);
-
-    if (!kmxkey || !km_key || !kmxkey->pubkey || sig == NULL ||
-        (tbs == NULL && tbslen > 0)) {
-        ERR_raise(ERR_LIB_USER, KMPROV_R_WRONG_PARAMETERS);
-        goto endverify;
-    }
-
-    if (is_hybrid) {
-        const EVP_MD *classical_md;
-        uint32_t actual_classical_sig_len = 0;
-        int digest_len;
-        unsigned char digest[SHA512_DIGEST_LENGTH]; /* init with max length */
-        size_t max_pq_sig_len =
-            kmxkey->kmx_provider_ctx.kmx_qs_ctx.sig->length_signature;
-        size_t max_classical_sig_len =
-            kmxkey->kmx_provider_ctx.kmx_evp_ctx->evp_info->length_signature;
-
-        if ((ctx_verify = EVP_PKEY_CTX_new(kmxkey->classical_pkey, NULL)) ==
-                NULL ||
-            EVP_PKEY_verify_init(ctx_verify) <= 0) {
-            ERR_raise(ERR_LIB_USER, KMPROV_R_VERIFY_ERROR);
-            goto endverify;
-        }
-        if (kmxkey->evp_info->keytype == EVP_PKEY_RSA) {
-            if (EVP_PKEY_CTX_set_rsa_padding(ctx_verify, RSA_PKCS1_PADDING) <=
-                0) {
-                ERR_raise(ERR_LIB_USER, KMPROV_R_WRONG_PARAMETERS);
-                goto endverify;
-            }
-        }
-        if (siglen > SIZE_OF_UINT32) {
-            size_t actual_pq_sig_len = 0;
-            DECODE_UINT32(actual_classical_sig_len, sig);
-            actual_pq_sig_len =
-                siglen - SIZE_OF_UINT32 - actual_classical_sig_len;
-            if (siglen <= (SIZE_OF_UINT32 + actual_classical_sig_len) ||
-                actual_classical_sig_len > max_classical_sig_len ||
-                actual_pq_sig_len > max_pq_sig_len) {
-                ERR_raise(ERR_LIB_USER, KMPROV_R_INVALID_ENCODING);
-                goto endverify;
-            }
-        } else {
-            ERR_raise(ERR_LIB_USER, KMPROV_R_INVALID_ENCODING);
-            goto endverify;
-        }
-
-        /* same as with sign: activate if pre-existing hashing to be used:
-         *  if (pkm_sigctx->mdctx == NULL) { // hashing not yet done
-         */
-        switch (km_key->claimed_nist_level) {
-        case 1:
-            classical_md = EVP_sha256();
-            digest_len = SHA256_DIGEST_LENGTH;
-            SHA256(tbs, tbslen, (unsigned char *)&digest);
-            break;
-        case 2:
-        case 3:
-            classical_md = EVP_sha384();
-            digest_len = SHA384_DIGEST_LENGTH;
-            SHA384(tbs, tbslen, (unsigned char *)&digest);
-            break;
-        case 4:
-        case 5:
-        default:
-            classical_md = EVP_sha512();
-            digest_len = SHA512_DIGEST_LENGTH;
-            SHA512(tbs, tbslen, (unsigned char *)&digest);
-            break;
-        }
-        if ((EVP_PKEY_CTX_set_signature_md(ctx_verify, classical_md) <= 0) ||
-            (EVP_PKEY_verify(ctx_verify, sig + SIZE_OF_UINT32,
-                             actual_classical_sig_len, digest,
-                             digest_len) <= 0)) {
-            ERR_raise(ERR_LIB_USER, KMPROV_R_VERIFY_ERROR);
-            goto endverify;
-        } else {
-            KM_SIG_PRINTF("KM SIG: classic verification OK\n");
-        }
-        /* activate for using pre-existing digest:
-         * }
-         *  else { // hashing already done:
-         *     if (EVP_PKEY_verify(ctx_verify, sig + SIZE_OF_UINT32,
-         * actual_classical_sig_len, tbs, tbslen) <= 0) {
-         *       ERR_raise(ERR_LIB_USER, KMPROV_R_VERIFY_ERROR);
-         *       goto endverify;
-         *     }
-         *  }
-         */
-        classical_sig_len = SIZE_OF_UINT32 + actual_classical_sig_len;
-        index += classical_sig_len;
-    }
-    if (is_composite) {
-        CompositeSignature *compsig;
-        int i;
-        int nid = OBJ_sn2nid(kmxkey->tls_name);
-        int comp_idx = get_composite_idx(get_kmalg_idx(nid));
-        if (comp_idx == -1)
-            goto endverify;
-        unsigned char *buf;
-        size_t buf_len;
-        const unsigned char *oid_prefix = composite_OID_prefix[comp_idx - 1];
-        char *final_tbs;
-        size_t final_tbslen = COMPOSITE_OID_PREFIX_LEN / 2;
-        int aux = 0;
-        unsigned char *tbs_hash;
-
-        if ((compsig = d2i_CompositeSignature(NULL, &sig, siglen)) == NULL) {
-            ERR_raise(ERR_LIB_USER, KMPROV_R_VERIFY_ERROR);
-            CompositeSignature_free(compsig);
-            goto endverify;
-        }
-
-        // prepare the pre hash
-        for (i = 0; i < kmxkey->numkeys; i++) {
-            char *name;
-            char *upcase_name;
-            if ((name = get_cmpname(nid, i)) == NULL) {
-                ERR_raise(ERR_LIB_USER, ERR_R_FATAL);
-                CompositeSignature_free(compsig);
-                goto endverify;
-            }
-            upcase_name = get_kmname_fromtls(name);
-
-            if ((upcase_name != 0) &&
-                    ((!strcmp(upcase_name, OQS_SIG_alg_ml_dsa_65)) ||
-                     (!strcmp(upcase_name, OQS_SIG_alg_ml_dsa_87))) ||
-                (name[0] == 'e')) {
-                aux = 1;
-                OPENSSL_free(name);
-                break;
-            }
-            OPENSSL_free(name);
-        }
-        switch (aux) {
-        case 0:
-            tbs_hash = OPENSSL_malloc(SHA256_DIGEST_LENGTH);
-            SHA256(tbs, tbslen, tbs_hash);
-            final_tbslen += SHA256_DIGEST_LENGTH;
-            break;
-        case 1:
-            tbs_hash = OPENSSL_malloc(SHA512_DIGEST_LENGTH);
-            SHA512(tbs, tbslen, tbs_hash);
-            final_tbslen += SHA512_DIGEST_LENGTH;
-            break;
-        default:
-            ERR_raise(ERR_LIB_USER, ERR_R_FATAL);
-            CompositeSignature_free(compsig);
-            goto endverify;
-        }
-        final_tbs = OPENSSL_malloc(final_tbslen);
-        composite_prefix_conversion(final_tbs, oid_prefix);
-        memcpy(final_tbs + COMPOSITE_OID_PREFIX_LEN / 2, tbs_hash,
-               final_tbslen - COMPOSITE_OID_PREFIX_LEN / 2);
-        OPENSSL_free(tbs_hash);
-
-        // verify
-        for (i = 0; i < kmxkey->numkeys; i++) {
-            if (i == 0) {
-                buf = compsig->sig1->data;
-                buf_len = compsig->sig1->length;
-            } else {
-                buf = compsig->sig2->data;
-                buf_len = compsig->sig2->length;
-            }
-
-            char *name;
-            if ((name = get_cmpname(nid, i)) == NULL) {
-                ERR_raise(ERR_LIB_USER, KMPROV_R_VERIFY_ERROR);
-                CompositeSignature_free(compsig);
-                OPENSSL_free(final_tbs);
-                goto endverify;
-            }
-
-            if (get_kmname_fromtls(name)) {
-                if (OQS_SIG_verify(km_key, (const unsigned char *)final_tbs,
-                                   final_tbslen, buf, buf_len,
-                                   kmxkey->comp_pubkey[i]) != OQS_SUCCESS) {
-                    ERR_raise(ERR_LIB_USER, KMPROV_R_VERIFY_ERROR);
-                    OPENSSL_free(name);
-                    CompositeSignature_free(compsig);
-                    OPENSSL_free(final_tbs);
-                    goto endverify;
-                }
-            } else {
-                const EVP_MD *classical_md;
-                int digest_len;
-                int aux;
-                unsigned char digest[SHA512_DIGEST_LENGTH]; /* init with max
-                                                               length */
-
-                if (name[0] == 'e') { // ed25519 or ed448
-                    EVP_MD_CTX *evp_ctx = EVP_MD_CTX_new();
-                    if ((EVP_DigestVerifyInit(evp_ctx, NULL, NULL, NULL,
-                                              kmxkey->classical_pkey) <= 0) ||
-                        (EVP_DigestVerify(evp_ctx, buf, buf_len,
-                                          (const unsigned char *)final_tbs,
-                                          final_tbslen) <= 0)) {
-                        ERR_raise(ERR_LIB_USER, KMPROV_R_VERIFY_ERROR);
-                        OPENSSL_free(name);
-                        EVP_MD_CTX_free(evp_ctx);
-                        CompositeSignature_free(compsig);
-                        OPENSSL_free(final_tbs);
-                        goto endverify;
-                    }
-                    EVP_MD_CTX_free(evp_ctx);
-                } else {
-                    if (((ctx_verify = EVP_PKEY_CTX_new(kmxkey->classical_pkey,
-                                                        NULL)) == NULL) ||
-                        (EVP_PKEY_verify_init(ctx_verify) <= 0)) {
-                        ERR_raise(ERR_LIB_USER, KMPROV_R_VERIFY_ERROR);
-                        OPENSSL_free(name);
-                        CompositeSignature_free(compsig);
-                        OPENSSL_free(final_tbs);
-                        goto endverify;
-                    }
-                    if (!strncmp(name, "pss", 3)) {
-                        int salt;
-                        const EVP_MD *pss_mgf1;
-                        if (!strncmp(name, "pss3072", 7)) {
-                            salt = 64;
-                            pss_mgf1 = EVP_sha512();
-                        } else {
-                            if (!strncmp(name, "pss2048", 7)) {
-                                salt = 32;
-                                pss_mgf1 = EVP_sha256();
-                            } else {
-                                ERR_raise(ERR_LIB_USER, KMPROV_R_VERIFY_ERROR);
-                                OPENSSL_free(name);
-                                CompositeSignature_free(compsig);
-                                OPENSSL_free(final_tbs);
-                                goto endverify;
-                            }
-                        }
-                        if ((EVP_PKEY_CTX_set_rsa_padding(
-                                 ctx_verify, RSA_PKCS1_PSS_PADDING) <= 0) ||
-                            (EVP_PKEY_CTX_set_rsa_pss_saltlen(ctx_verify,
-                                                              salt) <= 0) ||
-                            (EVP_PKEY_CTX_set_rsa_mgf1_md(ctx_verify,
-                                                          pss_mgf1) <= 0)) {
-                            ERR_raise(ERR_LIB_USER, KMPROV_R_WRONG_PARAMETERS);
-                            OPENSSL_free(name);
-                            CompositeSignature_free(compsig);
-                            OPENSSL_free(final_tbs);
-                            goto endverify;
-                        }
-                    } else if (kmxkey->kmx_provider_ctx.kmx_evp_ctx->evp_info
-                                   ->keytype == EVP_PKEY_RSA) {
-                        if (EVP_PKEY_CTX_set_rsa_padding(
-                                ctx_verify, RSA_PKCS1_PADDING) <= 0) {
-                            ERR_raise(ERR_LIB_USER, KMPROV_R_WRONG_PARAMETERS);
-                            OPENSSL_free(name);
-                            CompositeSignature_free(compsig);
-                            OPENSSL_free(final_tbs);
-                            goto endverify;
-                        }
-                    }
-                    if (comp_idx < 6) {
-                        classical_md = EVP_sha256();
-                        digest_len = SHA256_DIGEST_LENGTH;
-                        SHA256((const unsigned char *)final_tbs, final_tbslen,
-                               (unsigned char *)&digest);
-                    } else {
-                        classical_md = EVP_sha512();
-                        digest_len = SHA512_DIGEST_LENGTH;
-                        SHA512((const unsigned char *)final_tbs, final_tbslen,
-                               (unsigned char *)&digest);
-                    }
-
-                    if ((EVP_PKEY_CTX_set_signature_md(ctx_verify,
-                                                       classical_md) <= 0) ||
-                        (EVP_PKEY_verify(ctx_verify, buf, buf_len, digest,
-                                         digest_len) <= 0)) {
-                        ERR_raise(ERR_LIB_USER, KMPROV_R_VERIFY_ERROR);
-                        OPENSSL_free(name);
-                        CompositeSignature_free(compsig);
-                        OPENSSL_free(final_tbs);
-                        goto endverify;
-                    }
-                }
-            }
-
-            OPENSSL_free(name);
-        }
-        CompositeSignature_free(compsig);
-        OPENSSL_free(final_tbs);
-    } else {
-        if (!kmxkey->comp_pubkey[kmxkey->numkeys - 1]) {
-            ERR_raise(ERR_LIB_USER, KMPROV_R_WRONG_PARAMETERS);
-            goto endverify;
-        }
-        if (OQS_SIG_verify(
-                km_key, tbs, tbslen, sig + index, siglen - classical_sig_len,
-                kmxkey->comp_pubkey[kmxkey->numkeys - 1]) != OQS_SUCCESS) {
-            ERR_raise(ERR_LIB_USER, KMPROV_R_VERIFY_ERROR);
-            goto endverify;
-        }
-    }
-    rv = 1;
-
-endverify:
-    if (ctx_verify) {
-        EVP_PKEY_CTX_free(ctx_verify);
-    }
-    KM_SIG_PRINTF2("KM SIG provider: verify rv = %d\n", rv);
-    return rv;
-}
-
-static int km_sig_digest_signverify_init(void *vpkm_sigctx,
-                                          const char *mdname, void *vkmsig,
-                                          int operation) {
-    PROV_KMSIG_CTX *pkm_sigctx = (PROV_KMSIG_CTX *)vpkm_sigctx;
-
-    KM_SIG_PRINTF2(
-        "KM SIG provider: digest_signverify_init called for mdname %s\n",
-        mdname);
-
-    pkm_sigctx->flag_allow_md = 1; /* permitted until first use */
-    if (!km_sig_signverify_init(vpkm_sigctx, vkmsig, operation))
-        return 0;
-
-    if (!km_sig_setup_md(pkm_sigctx, mdname, NULL))
-        return 0;
-
-    if (mdname != NULL) {
-        pkm_sigctx->mdctx = EVP_MD_CTX_new();
-        if (pkm_sigctx->mdctx == NULL)
-            goto error;
-
-        if (!EVP_DigestInit_ex(pkm_sigctx->mdctx, pkm_sigctx->md, NULL))
-            goto error;
-    }
-
-    return 1;
-
-error:
-    EVP_MD_CTX_free(pkm_sigctx->mdctx);
-    EVP_MD_free(pkm_sigctx->md);
-    pkm_sigctx->mdctx = NULL;
-    pkm_sigctx->md = NULL;
-    KM_SIG_PRINTF("   KM SIG provider: digest_signverify FAILED\n");
-    return 0;
-}
-
-static int km_sig_digest_sign_init(void *vpkm_sigctx, const char *mdname,
-                                    void *vkmsig, const OSSL_PARAM params[]) {
-    KM_SIG_PRINTF("KM SIG provider: digest_sign_init called\n");
-    return km_sig_digest_signverify_init(vpkm_sigctx, mdname, vkmsig,
-                                          EVP_PKEY_OP_SIGN);
-}
-
-static int km_sig_digest_verify_init(void *vpkm_sigctx, const char *mdname,
-                                      void *vkmsig,
-                                      const OSSL_PARAM params[]) {
-    KM_SIG_PRINTF("KM SIG provider: sig_digest_verify called\n");
-    return km_sig_digest_signverify_init(vpkm_sigctx, mdname, vkmsig,
-                                          EVP_PKEY_OP_VERIFY);
-}
-
-int km_sig_digest_signverify_update(void *vpkm_sigctx,
-                                     const unsigned char *data,
-                                     size_t datalen) {
-    PROV_KMSIG_CTX *pkm_sigctx = (PROV_KMSIG_CTX *)vpkm_sigctx;
-
-    KM_SIG_PRINTF("KM SIG provider: digest_signverify_update called\n");
-
-    if (pkm_sigctx == NULL)
-        return 0;
-    // disallow MD changes after update has been called at least once
-    pkm_sigctx->flag_allow_md = 0;
-
-    if (pkm_sigctx->mdctx)
-        return EVP_DigestUpdate(pkm_sigctx->mdctx, data, datalen);
-    else {
-        // unconditionally collect data for passing in full to KM API
-        if (pkm_sigctx->mddata) {
-            unsigned char *newdata = OPENSSL_realloc(
-                pkm_sigctx->mddata, pkm_sigctx->mdsize + datalen);
-            if (newdata == NULL)
-                return 0;
-            memcpy(newdata + pkm_sigctx->mdsize, data, datalen);
-            pkm_sigctx->mddata = newdata;
-            pkm_sigctx->mdsize += datalen;
-        } else { // simple alloc and copy
-            pkm_sigctx->mddata = OPENSSL_malloc(datalen);
-            if (pkm_sigctx->mddata == NULL)
-                return 0;
-            pkm_sigctx->mdsize = datalen;
-            memcpy(pkm_sigctx->mddata, data, pkm_sigctx->mdsize);
-        }
-        KM_SIG_PRINTF2("KM SIG provider: digest_signverify_update collected "
-                        "%ld bytes...\n",
-                        pkm_sigctx->mdsize);
-    }
-    return 1;
-}
-
-int km_sig_digest_sign_final(void *vpkm_sigctx, unsigned char *sig,
-                              size_t *siglen, size_t sigsize) {
-    PROV_KMSIG_CTX *pkm_sigctx = (PROV_KMSIG_CTX *)vpkm_sigctx;
-    unsigned char digest[EVP_MAX_MD_SIZE];
-    unsigned int dlen = 0;
-
-    KM_SIG_PRINTF("KM SIG provider: digest_sign_final called\n");
-    if (pkm_sigctx == NULL)
-        return 0;
-
-    /*
-     * If sig is NULL then we're just finding out the sig size. Other fields
-     * are ignored. Defer to km_sig_sign.
-     */
-    if (sig != NULL) {
-        /*
-         * TODO(3.0): There is the possibility that some externally
-         * provided digests exceed EVP_MAX_MD_SIZE. We should probably
-         * handle that somehow - but that problem is much larger than just
-         * here.
-         */
-        if (pkm_sigctx->mdctx != NULL)
-            if (!EVP_DigestFinal_ex(pkm_sigctx->mdctx, digest, &dlen))
-                return 0;
-    }
-
-    pkm_sigctx->flag_allow_md = 1;
-
-    if (pkm_sigctx->mdctx != NULL)
-        return km_sig_sign(vpkm_sigctx, sig, siglen, sigsize, digest,
-                            (size_t)dlen);
-    else
-        return km_sig_sign(vpkm_sigctx, sig, siglen, sigsize,
-                            pkm_sigctx->mddata, pkm_sigctx->mdsize);
-}
-
-int km_sig_digest_verify_final(void *vpkm_sigctx, const unsigned char *sig,
-                                size_t siglen) {
-    PROV_KMSIG_CTX *pkm_sigctx = (PROV_KMSIG_CTX *)vpkm_sigctx;
-    unsigned char digest[EVP_MAX_MD_SIZE];
-    unsigned int dlen = 0;
-
-    KM_SIG_PRINTF("KM SIG provider: digest_verify_final called\n");
-    if (pkm_sigctx == NULL)
-        return 0;
-
-    // TBC for hybrids:
-    if (pkm_sigctx->mdctx) {
-        if (!EVP_DigestFinal_ex(pkm_sigctx->mdctx, digest, &dlen))
-            return 0;
-
-        pkm_sigctx->flag_allow_md = 1;
-
-        return km_sig_verify(vpkm_sigctx, sig, siglen, digest, (size_t)dlen);
-    } else
-        return km_sig_verify(vpkm_sigctx, sig, siglen, pkm_sigctx->mddata,
-                              pkm_sigctx->mdsize);
-}
-
-static void km_sig_freectx(void *vpkm_sigctx) {
-    PROV_KMSIG_CTX *ctx = (PROV_KMSIG_CTX *)vpkm_sigctx;
-
-    KM_SIG_PRINTF("KM SIG provider: freectx called\n");
-    OPENSSL_free(ctx->propq);
-    EVP_MD_CTX_free(ctx->mdctx);
-    EVP_MD_free(ctx->md);
-    ctx->propq = NULL;
-    ctx->mdctx = NULL;
-    ctx->md = NULL;
-    kmx_key_free(ctx->sig);
-    OPENSSL_free(ctx->mddata);
-    ctx->mddata = NULL;
-    ctx->mdsize = 0;
-    OPENSSL_free(ctx->aid);
-    ctx->aid = NULL;
-    ctx->aid_len = 0;
-    OPENSSL_free(ctx);
-}
-
-static void *km_sig_dupctx(void *vpkm_sigctx) {
-    PROV_KMSIG_CTX *srcctx = (PROV_KMSIG_CTX *)vpkm_sigctx;
-    PROV_KMSIG_CTX *dstctx;
-
-    KM_SIG_PRINTF("KM SIG provider: dupctx called\n");
-
-    dstctx = OPENSSL_zalloc(sizeof(*srcctx));
-    if (dstctx == NULL)
-        return NULL;
-
-    *dstctx = *srcctx;
-    dstctx->sig = NULL;
-    dstctx->md = NULL;
-    dstctx->mdctx = NULL;
-
-    if (srcctx->sig != NULL && !kmx_key_up_ref(srcctx->sig))
-        goto err;
-    dstctx->sig = srcctx->sig;
-
-    if (srcctx->md != NULL && !EVP_MD_up_ref(srcctx->md))
-        goto err;
-    dstctx->md = srcctx->md;
-
-    if (srcctx->mdctx != NULL) {
-        dstctx->mdctx = EVP_MD_CTX_new();
-        if (dstctx->mdctx == NULL ||
-            !EVP_MD_CTX_copy_ex(dstctx->mdctx, srcctx->mdctx))
-            goto err;
-    }
-
-    if (srcctx->mddata) {
-        dstctx->mddata = OPENSSL_memdup(srcctx->mddata, srcctx->mdsize);
-        if (dstctx->mddata == NULL)
-            goto err;
-        dstctx->mdsize = srcctx->mdsize;
-    }
-
-    if (srcctx->aid) {
-        dstctx->aid = OPENSSL_memdup(srcctx->aid, srcctx->aid_len);
-        if (dstctx->aid == NULL)
-            goto err;
-        dstctx->aid_len = srcctx->aid_len;
-    }
-
-    if (srcctx->propq) {
-        dstctx->propq = OPENSSL_strdup(srcctx->propq);
-        if (dstctx->propq == NULL)
-            goto err;
-    }
-
-    return dstctx;
 err:
-    km_sig_freectx(dstctx);
+    km_sig_freectx(dst);
     return NULL;
 }
 
-static int km_sig_get_ctx_params(void *vpkm_sigctx, OSSL_PARAM *params) {
-    PROV_KMSIG_CTX *pkm_sigctx = (PROV_KMSIG_CTX *)vpkm_sigctx;
-    OSSL_PARAM *p;
+/* ============================================================
+ * INIT (sign/verify) & variant digest_*
+ * ============================================================ */
+static int km_sig_sign_init(void *vctx, void *vkey, const OSSL_PARAM params[]) {
+    (void)params; KMSIG_LOG0("sign_init\n");
+    return km_sig_signverify_init_common(vctx, vkey, EVP_PKEY_OP_SIGN);
+}
+static int km_sig_verify_init(void *vctx, void *vkey, const OSSL_PARAM params[]) {
+    (void)params; KMSIG_LOG0("verify_init\n");
+    return km_sig_signverify_init_common(vctx, vkey, EVP_PKEY_OP_VERIFY);
+}
 
-    KM_SIG_PRINTF("KM SIG provider: get_ctx_params called\n");
-    if (pkm_sigctx == NULL || params == NULL)
-        return 0;
+static int km_sig_digest_signverify_init(void *vctx, const char *mdname, void *vkey, int op) {
+    PROV_KMSIG_CTX *c = (PROV_KMSIG_CTX *)vctx;
+    KMSIG_LOG1("digest_*_init md=%s\n", mdname ? mdname : "(null)");
 
-    p = OSSL_PARAM_locate(params, OSSL_SIGNATURE_PARAM_ALGORITHM_ID);
+    c->flag_allow_md = 1;
+    if (!km_sig_signverify_init_common(vctx, vkey, op)) return 0;
+    if (!km_sig_setup_md(c, mdname, NULL)) return 0;
 
-    if (pkm_sigctx->aid == NULL) {
-        pkm_sigctx->aid_len =
-            get_aid(&(pkm_sigctx->aid), pkm_sigctx->sig->tls_name);
+    if (mdname) {
+        c->mdctx = EVP_MD_CTX_new();
+        if (!c->mdctx || !EVP_DigestInit_ex(c->mdctx, c->md, NULL)) {
+            EVP_MD_CTX_free(c->mdctx); c->mdctx = NULL;
+            EVP_MD_free(c->md);        c->md    = NULL;
+            KMSIG_LOG0("digest_*_init FAILED\n");
+            return 0;
+        }
+    }
+    return 1;
+}
+static int km_sig_digest_sign_init(void *vctx, const char *mdname, void *vkey, const OSSL_PARAM params[]) {
+    (void)params; return km_sig_digest_signverify_init(vctx, mdname, vkey, EVP_PKEY_OP_SIGN);
+}
+static int km_sig_digest_verify_init(void *vctx, const char *mdname, void *vkey, const OSSL_PARAM params[]) {
+    (void)params; return km_sig_digest_signverify_init(vctx, mdname, vkey, EVP_PKEY_OP_VERIFY);
+}
+int km_sig_digest_signverify_update(void *vctx, const unsigned char *data, size_t len) {
+    PROV_KMSIG_CTX *c = (PROV_KMSIG_CTX *)vctx;
+    if (!c) return 0;
+    c->flag_allow_md = 0; /* setelah update, digest tidak boleh diganti */
+
+    if (c->mdctx) return EVP_DigestUpdate(c->mdctx, data, len);
+
+    /* kumpulkan data mentah */
+    if (c->mddata) {
+        unsigned char *p = OPENSSL_realloc(c->mddata, c->mdsize + len);
+        if (!p) return 0;
+        memcpy(p + c->mdsize, data, len);
+        c->mddata = p;
+        c->mdsize += len;
+    } else {
+        c->mddata = OPENSSL_malloc(len);
+        if (!c) return 0;
+        memcpy(c->mddata, data, len);
+        c->mdsize = len;
+    }
+    KMSIG_LOG1("digest_update collected=%lu\n",(unsigned long)c->mdsize);
+    return 1;
+}
+int km_sig_digest_sign_final(void *vctx, unsigned char *sig, size_t *siglen, size_t sigsize) {
+    (void)sigsize;
+    PROV_KMSIG_CTX *c = (PROV_KMSIG_CTX *)vctx;
+    unsigned char md[EVP_MAX_MD_SIZE]; unsigned int mdlen = 0;
+    if (!c) return 0;
+    if (sig && c->mdctx && !EVP_DigestFinal_ex(c->mdctx, md, &mdlen)) return 0;
+    c->flag_allow_md = 1;
+    return c->mdctx ? km_sig_sign(vctx, sig, siglen, 0, md, (size_t)mdlen)
+                    : km_sig_sign(vctx, sig, siglen, 0, c->mddata, c->mdsize);
+}
+int km_sig_digest_verify_final(void *vctx, const unsigned char *sig, size_t siglen) {
+    PROV_KMSIG_CTX *c = (PROV_KMSIG_CTX *)vctx;
+    unsigned char md[EVP_MAX_MD_SIZE]; unsigned int mdlen = 0;
+    if (!c) return 0;
+
+    if (c->mdctx) {
+        if (!EVP_DigestFinal_ex(c->mdctx, md, &mdlen)) return 0;
+        c->flag_allow_md = 1;
+        return km_sig_verify(vctx, sig, siglen, md, (size_t)mdlen);
+    }
+    return km_sig_verify(vctx, sig, siglen, c->mddata, c->mdsize);
+}
+
+/* ============================================================
+ * SIGN & VERIFY
+ * ============================================================ */
+static int km_sig_sign(void *vctx, unsigned char *sig, size_t *siglen,
+                       size_t sigsize, const unsigned char *tbs, size_t tbslen) {
+    (void)sigsize;
+    PROV_KMSIG_CTX *c = (PROV_KMSIG_CTX *)vctx;
+    KMX_KEY *k = c->sig;
+    OQS_SIG *pq = k->kmx_provider_ctx.kmx_qs_ctx.sig;
+    EVP_PKEY *klass = k->classical_pkey;
+    EVP_PKEY_CTX *klass_ctx = NULL;
+
+    const int is_hybrid    = (k->keytype == KEY_TYPE_HYB_SIG);
+    const int is_composite = (k->keytype == KEY_TYPE_CMP_SIG);
+
+    size_t max_len = 0, pq_len = 0, klass_len = 0, idx = 0;
+    int ok = 0;
+
+    KMSIG_LOG1("sign: tbs=%lu\n",(unsigned long)tbslen);
+    if (!k || !k->privkey || (!pq && !klass)) { ERR_raise(ERR_LIB_USER, KMPROV_R_NO_PRIVATE_KEY); return 0; }
+
+    max_len = is_composite ? kmx_key_maxsize(k) : pq->length_signature;
+    if (is_hybrid) max_len += SIZE_OF_UINT32 + k->evp_info->length_signature;
+
+    if (!sig) { *siglen = max_len; KMSIG_LOG1("sign(size only)=%lu\n",(unsigned long)*siglen); return 1; }
+    if (*siglen < max_len) { ERR_raise(ERR_LIB_USER, KMPROV_R_BUFFER_LENGTH_WRONG); return 0; }
+
+    /* === HYBRID: tandatangan klasik + PQ === */
+    if (is_hybrid) {
+        klass_ctx = EVP_PKEY_CTX_new(klass, NULL);
+        if (!klass_ctx || EVP_PKEY_sign_init(klass_ctx) <= 0) { ERR_raise(ERR_LIB_USER, ERR_R_FATAL); goto end; }
+
+        /* setup padding jika RSA atau PSS */
+        if (k->evp_info->keytype == EVP_PKEY_RSA) {
+            if (!setup_rsa_padding(klass_ctx, 0, "rsa")) { ERR_raise(ERR_LIB_USER, ERR_R_FATAL); goto end; }
+        }
+
+        /* Digest-kan tbs sesuai level PQ */
+        int dlen = 0; unsigned char dig[SHA512_DIGEST_LENGTH];
+        const EVP_MD *klass_md = select_classical_md(pq, &dlen);
+        if      (dlen == SHA256_DIGEST_LENGTH) SHA256(tbs, tbslen, dig);
+        else if (dlen == SHA384_DIGEST_LENGTH) SHA384(tbs, tbslen, dig);
+        else                                   SHA512(tbs, tbslen, dig);
+
+        if (EVP_PKEY_CTX_set_signature_md(klass_ctx, klass_md) <= 0 ||
+            EVP_PKEY_sign(klass_ctx, sig + SIZE_OF_UINT32, &klass_len, dig, dlen) <= 0) {
+            ERR_raise(ERR_LIB_USER, ERR_R_FATAL); goto end;
+        }
+        if (klass_len > k->evp_info->length_signature) { ERR_raise(ERR_LIB_USER, KMPROV_R_BUFFER_LENGTH_WRONG); goto end; }
+        ENCODE_UINT32(sig, klass_len);
+        idx += (SIZE_OF_UINT32 + klass_len);
     }
 
-    if (p != NULL &&
-        !OSSL_PARAM_set_octet_string(p, pkm_sigctx->aid, pkm_sigctx->aid_len))
-        return 0;
+    /* === COMPOSITE: bangun ASN.1 dengan 2 komponen === */
+    if (is_composite) {
+        int nid = OBJ_sn2nid(k->tls_name);
+        int comp_idx = get_composite_idx(get_kmalg_idx(nid));
+        if (comp_idx == -1) goto end;
+
+        const unsigned char *pref = composite_OID_prefix[comp_idx - 1];
+
+        /* pilih mode hash untuk prehash: SHA256 (default) atau SHA512 untuk ML-DSA tinggi / Ed* */
+        int sha512_mode = 0;
+        for (int i = 0; i < k->numkeys; i++) {
+            char *part = get_cmpname(nid, i);
+            if (!part) { ERR_raise(ERR_LIB_USER, ERR_R_FATAL); goto end; }
+            char *pqname = get_kmname_fromtls(part);
+            if ( (pqname && (!strcmp(pqname, OQS_SIG_alg_ml_dsa_65) || !strcmp(pqname, OQS_SIG_alg_ml_dsa_87))) ||
+                 part[0] == 'e') sha512_mode = 1;
+            OPENSSL_free(part);
+            if (sha512_mode) break;
+        }
+
+        size_t prelen = 0;
+        unsigned char *pretbs = make_composite_prehash(pref, tbs, tbslen, &prelen, sha512_mode);
+        if (!pretbs) { ERR_raise(ERR_LIB_USER, ERR_R_MALLOC_FAILURE); goto end; }
+
+        CompositeSignature *cs = CompositeSignature_new();
+        if (!cs) { OPENSSL_free(pretbs); goto end; }
+
+        for (int i = 0; i < k->numkeys; i++) {
+            unsigned char *buf = NULL; size_t blen = 0;
+            char *name = get_cmpname(nid, i);
+            if (!name) { ERR_raise(ERR_LIB_USER, ERR_R_FATAL); CompositeSignature_free(cs); OPENSSL_free(pretbs); goto end; }
+
+            if (get_kmname_fromtls(name)) {
+                /* PQ part */
+                blen = k->kmx_provider_ctx.kmx_qs_ctx.sig->length_signature;
+                buf = OPENSSL_malloc(blen);
+                if (!buf || OQS_SIG_sign(k->kmx_provider_ctx.kmx_qs_ctx.sig, buf, &blen, pretbs, prelen, k->comp_privkey[i]) != OQS_SUCCESS) {
+                    ERR_raise(ERR_LIB_USER, KMPROV_R_SIGNING_FAILED);
+                    OPENSSL_free(buf); OPENSSL_free(name); CompositeSignature_free(cs); OPENSSL_free(pretbs); goto end;
+                }
+            } else {
+                /* classical part */
+                EVP_PKEY *klass_key = k->classical_pkey;
+                blen = k->kmx_provider_ctx.kmx_evp_ctx->evp_info->length_signature;
+                buf = OPENSSL_malloc(blen);
+                if (!buf) { OPENSSL_free(name); CompositeSignature_free(cs); OPENSSL_free(pretbs); goto end; }
+
+                if (name[0] == 'e') { /* Ed25519/Ed448 */
+                    EVP_MD_CTX *m = EVP_MD_CTX_new();
+                    if (!m ||
+                        EVP_DigestSignInit(m, NULL, NULL, NULL, klass_key) <= 0 ||
+                        EVP_DigestSign(m, buf, &blen, pretbs, prelen) <= 0) {
+                        ERR_raise(ERR_LIB_USER, ERR_R_FATAL);
+                        EVP_MD_CTX_free(m); OPENSSL_free(name); OPENSSL_free(buf); CompositeSignature_free(cs); OPENSSL_free(pretbs); goto end;
+                    }
+                    EVP_MD_CTX_free(m);
+                } else {
+                    EVP_PKEY_CTX *pc = EVP_PKEY_CTX_new(klass_key, NULL);
+                    if (!pc || EVP_PKEY_sign_init(pc) <= 0) { ERR_raise(ERR_LIB_USER, ERR_R_FATAL); EVP_PKEY_CTX_free(pc); OPENSSL_free(name); OPENSSL_free(buf); CompositeSignature_free(cs); OPENSSL_free(pretbs); goto end; }
+                    int is_pss = !strncmp(name, "pss", 3);
+                    if (!setup_rsa_padding(pc, is_pss, name)) {
+                        ERR_raise(ERR_LIB_USER, ERR_R_FATAL); EVP_PKEY_CTX_free(pc); OPENSSL_free(name); OPENSSL_free(buf); CompositeSignature_free(cs); OPENSSL_free(pretbs); goto end;
+                    }
+
+                    int dlen = sha512_mode ? SHA512_DIGEST_LENGTH : SHA256_DIGEST_LENGTH;
+                    unsigned char dig[SHA512_DIGEST_LENGTH];
+                    if (sha512_mode) SHA512(pretbs, prelen, dig); else SHA256(pretbs, prelen, dig);
+
+                    const EVP_MD *md = sha512_mode ? EVP_sha512() : EVP_sha256();
+                    if (EVP_PKEY_CTX_set_signature_md(pc, md) <= 0 ||
+                        EVP_PKEY_sign(pc, buf, &blen, dig, dlen) <= 0) {
+                        ERR_raise(ERR_LIB_USER, ERR_R_FATAL);
+                        EVP_PKEY_CTX_free(pc); OPENSSL_free(name); OPENSSL_free(buf); CompositeSignature_free(cs); OPENSSL_free(pretbs); goto end;
+                    }
+                    EVP_PKEY_CTX_free(pc);
+                    if (blen > k->kmx_provider_ctx.kmx_evp_ctx->evp_info->length_signature) {
+                        ERR_raise(ERR_LIB_USER, KMPROV_R_BUFFER_LENGTH_WRONG);
+                        OPENSSL_free(name); OPENSSL_free(buf); CompositeSignature_free(cs); OPENSSL_free(pretbs); goto end;
+                    }
+                }
+            }
+
+            ASN1_BIT_STRING *dst = (i==0) ? cs->sig1 : cs->sig2;
+            dst->data   = OPENSSL_memdup(buf, blen);
+            dst->length = (int)blen;
+            dst->flags  = 8; /* skip bit-unused checks */
+            OPENSSL_free(buf);
+            OPENSSL_free(name);
+        }
+
+        pq_len = i2d_CompositeSignature(cs, &sig);
+        CompositeSignature_free(cs);
+        OPENSSL_free(pretbs);
+    } else {
+        /* === PQ tunggal (atau bagian PQ dari hybrid) === */
+        if (OQS_SIG_sign(pq, sig + idx, &pq_len, tbs, tbslen, k->comp_privkey[k->numkeys-1]) != OQS_SUCCESS) {
+            ERR_raise(ERR_LIB_USER, KMPROV_R_SIGNING_FAILED); goto end;
+        }
+    }
+
+    *siglen = idx + pq_len;
+    KMSIG_LOG1("sign out=%lu\n",(unsigned long)*siglen);
+    ok = 1;
+
+end:
+    EVP_PKEY_CTX_free(klass_ctx);
+    return ok;
+}
+
+static int km_sig_verify(void *vctx, const unsigned char *sig, size_t siglen,
+                         const unsigned char *tbs, size_t tbslen) {
+    PROV_KMSIG_CTX *c = (PROV_KMSIG_CTX *)vctx;
+    KMX_KEY *k = c->sig;
+    OQS_SIG *pq = k->kmx_provider_ctx.kmx_qs_ctx.sig;
+    EVP_PKEY_CTX *vctx_classic = NULL;
+
+    const int is_hybrid    = (k->keytype == KEY_TYPE_HYB_SIG);
+    const int is_composite = (k->keytype == KEY_TYPE_CMP_SIG);
+
+    size_t klass_len = 0, idx = 0;
+    int ok = 0;
+
+    KMSIG_LOG2("verify sig=%lu tbs=%lu\n",(unsigned long)siglen,(unsigned long)tbslen);
+    if (!k || !pq || !k->pubkey || !sig || (!tbs && tbslen>0)) { ERR_raise(ERR_LIB_USER, KMPROV_R_WRONG_PARAMETERS); return 0; }
+
+    if (is_hybrid) {
+        /* layout: [u32 klass_len][klass_sig][pq_sig] */
+        if (siglen <= SIZE_OF_UINT32) { ERR_raise(ERR_LIB_USER, KMPROV_R_INVALID_ENCODING); return 0; }
+
+        uint32_t klass_sz = 0; DECODE_UINT32(klass_sz, sig);
+        size_t pq_sz = siglen - SIZE_OF_UINT32 - klass_sz;
+        if (siglen <= SIZE_OF_UINT32 + klass_sz ||
+            klass_sz > k->kmx_provider_ctx.kmx_evp_ctx->evp_info->length_signature ||
+            pq_sz    > pq->length_signature) {
+            ERR_raise(ERR_LIB_USER, KMPROV_R_INVALID_ENCODING); return 0;
+        }
+
+        int dlen = 0; unsigned char dig[SHA512_DIGEST_LENGTH];
+        const EVP_MD *md = select_classical_md(pq, &dlen);
+        if      (dlen == SHA256_DIGEST_LENGTH) SHA256(tbs, tbslen, dig);
+        else if (dlen == SHA384_DIGEST_LENGTH) SHA384(tbs, tbslen, dig);
+        else                                   SHA512(tbs, tbslen, dig);
+
+        vctx_classic = EVP_PKEY_CTX_new(k->classical_pkey, NULL);
+        if (!vctx_classic || EVP_PKEY_verify_init(vctx_classic) <= 0) { ERR_raise(ERR_LIB_USER, KMPROV_R_VERIFY_ERROR); goto end; }
+        if (k->evp_info->keytype == EVP_PKEY_RSA &&
+            EVP_PKEY_CTX_set_rsa_padding(vctx_classic, RSA_PKCS1_PADDING) <= 0) {
+            ERR_raise(ERR_LIB_USER, KMPROV_R_WRONG_PARAMETERS); goto end;
+        }
+        if (EVP_PKEY_CTX_set_signature_md(vctx_classic, md) <= 0 ||
+            EVP_PKEY_verify(vctx_classic, sig + SIZE_OF_UINT32, klass_sz, dig, dlen) <= 0) {
+            ERR_raise(ERR_LIB_USER, KMPROV_R_VERIFY_ERROR); goto end;
+        }
+        klass_len = SIZE_OF_UINT32 + klass_sz;
+        idx += klass_len;
+    }
+
+    if (is_composite) {
+        int nid = OBJ_sn2nid(k->tls_name);
+        int comp_idx = get_composite_idx(get_kmalg_idx(nid));
+        if (comp_idx == -1) goto end;
+
+        const unsigned char *pref = composite_OID_prefix[comp_idx - 1];
+        CompositeSignature *cs = d2i_CompositeSignature(NULL, &sig, siglen);
+        if (!cs) { ERR_raise(ERR_LIB_USER, KMPROV_R_VERIFY_ERROR); goto end; }
+
+        /* deteksi mode hash prehash seperti sign() */
+        int sha512_mode = 0;
+        for (int i = 0; i < k->numkeys; i++) {
+            char *part = get_cmpname(nid, i);
+            if (!part) { CompositeSignature_free(cs); ERR_raise(ERR_LIB_USER, ERR_R_FATAL); goto end; }
+            char *pqname = get_kmname_fromtls(part);
+            if ((pqname && (!strcmp(pqname, OQS_SIG_alg_ml_dsa_65) || !strcmp(pqname, OQS_SIG_alg_ml_dsa_87))) ||
+                 part[0] == 'e') sha512_mode = 1;
+            OPENSSL_free(part);
+            if (sha512_mode) break;
+        }
+
+        size_t prelen = 0;
+        unsigned char *pretbs = make_composite_prehash(pref, tbs, tbslen, &prelen, sha512_mode);
+        if (!pretbs) { CompositeSignature_free(cs); ERR_raise(ERR_LIB_USER, ERR_R_MALLOC_FAILURE); goto end; }
+
+        for (int i = 0; i < k->numkeys; i++) {
+            unsigned char *buf; size_t blen;
+            if (i==0) { buf = cs->sig1->data; blen = cs->sig1->length; }
+            else      { buf = cs->sig2->data; blen = cs->sig2->length; }
+
+            char *name = get_cmpname(nid, i);
+            if (!name) { ERR_raise(ERR_LIB_USER, KMPROV_R_VERIFY_ERROR); OPENSSL_free(pretbs); CompositeSignature_free(cs); goto end; }
+
+            if (get_kmname_fromtls(name)) {
+                if (OQS_SIG_verify(pq, pretbs, prelen, buf, blen, k->comp_pubkey[i]) != OQS_SUCCESS) {
+                    ERR_raise(ERR_LIB_USER, KMPROV_R_VERIFY_ERROR); OPENSSL_free(name); OPENSSL_free(pretbs); CompositeSignature_free(cs); goto end;
+                }
+            } else {
+                if (name[0] == 'e') {
+                    EVP_MD_CTX *m = EVP_MD_CTX_new();
+                    if (!m || EVP_DigestVerifyInit(m, NULL, NULL, NULL, k->classical_pkey) <= 0 ||
+                        EVP_DigestVerify(m, buf, blen, pretbs, prelen) <= 0) {
+                        ERR_raise(ERR_LIB_USER, KMPROV_R_VERIFY_ERROR);
+                        EVP_MD_CTX_free(m); OPENSSL_free(name); OPENSSL_free(pretbs); CompositeSignature_free(cs); goto end;
+                    }
+                    EVP_MD_CTX_free(m);
+                } else {
+                    EVP_PKEY_CTX *pc = EVP_PKEY_CTX_new(k->classical_pkey, NULL);
+                    if (!pc || EVP_PKEY_verify_init(pc) <= 0) { ERR_raise(ERR_LIB_USER, KMPROV_R_VERIFY_ERROR); EVP_PKEY_CTX_free(pc); OPENSSL_free(name); OPENSSL_free(pretbs); CompositeSignature_free(cs); goto end; }
+                    int is_pss = !strncmp(name, "pss", 3);
+                    if (!setup_rsa_padding(pc, is_pss, name)) { ERR_raise(ERR_LIB_USER, KMPROV_R_WRONG_PARAMETERS); EVP_PKEY_CTX_free(pc); OPENSSL_free(name); OPENSSL_free(pretbs); CompositeSignature_free(cs); goto end; }
+
+                    int dlen = sha512_mode ? SHA512_DIGEST_LENGTH : SHA256_DIGEST_LENGTH;
+                    unsigned char dig[SHA512_DIGEST_LENGTH];
+                    if (sha512_mode) SHA512(pretbs, prelen, dig); else SHA256(pretbs, prelen, dig);
+
+                    const EVP_MD *md = sha512_mode ? EVP_sha512() : EVP_sha256();
+                    if (EVP_PKEY_CTX_set_signature_md(pc, md) <= 0 ||
+                        EVP_PKEY_verify(pc, buf, blen, dig, dlen) <= 0) {
+                        ERR_raise(ERR_LIB_USER, KMPROV_R_VERIFY_ERROR);
+                        EVP_PKEY_CTX_free(pc); OPENSSL_free(name); OPENSSL_free(pretbs); CompositeSignature_free(cs); goto end;
+                    }
+                    EVP_PKEY_CTX_free(pc);
+                }
+            }
+            OPENSSL_free(name);
+        }
+        OPENSSL_free(pretbs);
+        CompositeSignature_free(cs);
+    } else {
+        /* PQ tunggal (atau sisa hybrid setelah klasik) */
+        if (!k->comp_pubkey[k->numkeys-1]) { ERR_raise(ERR_LIB_USER, KMPROV_R_WRONG_PARAMETERS); goto end; }
+        if (OQS_SIG_verify(pq, tbs, tbslen, sig + idx, siglen - idx, k->comp_pubkey[k->numkeys-1]) != OQS_SUCCESS) {
+            ERR_raise(ERR_LIB_USER, KMPROV_R_VERIFY_ERROR); goto end;
+        }
+    }
+
+    ok = 1;
+end:
+    EVP_PKEY_CTX_free(vctx_classic);
+    KMSIG_LOG1("verify rv=%d\n", ok);
+    return ok;
+}
+
+/* ============================================================
+ * GET/SET PARAMS
+ * ============================================================ */
+static int km_sig_get_ctx_params(void *vctx, OSSL_PARAM *params) {
+    PROV_KMSIG_CTX *c = (PROV_KMSIG_CTX *)vctx;
+    if (!c || !params) return 0;
+
+    OSSL_PARAM *p = OSSL_PARAM_locate(params, OSSL_SIGNATURE_PARAM_ALGORITHM_ID);
+    if (c->aid == NULL) c->aid_len = get_aid(&c->aid, c->sig->tls_name);
+    if (p && !OSSL_PARAM_set_octet_string(p, c->aid, c->aid_len)) return 0;
 
     p = OSSL_PARAM_locate(params, OSSL_SIGNATURE_PARAM_DIGEST);
-    if (p != NULL && !OSSL_PARAM_set_utf8_string(p, pkm_sigctx->mdname))
-        return 0;
+    if (p && !OSSL_PARAM_set_utf8_string(p, c->mdname)) return 0;
 
     return 1;
 }
-
 static const OSSL_PARAM known_gettable_ctx_params[] = {
     OSSL_PARAM_octet_string(OSSL_SIGNATURE_PARAM_ALGORITHM_ID, NULL, 0),
     OSSL_PARAM_utf8_string(OSSL_SIGNATURE_PARAM_DIGEST, NULL, 0),
-    OSSL_PARAM_END};
-
-static const OSSL_PARAM *
-km_sig_gettable_ctx_params(ossl_unused void *vpkm_sigctx,
-                            ossl_unused void *vctx) {
-    KM_SIG_PRINTF("KM SIG provider: gettable_ctx_params called\n");
-    return known_gettable_ctx_params;
+    OSSL_PARAM_END
+};
+static const OSSL_PARAM *km_sig_gettable_ctx_params(void *vctx, void *provctx) {
+    (void)vctx; (void)provctx; return known_gettable_ctx_params;
 }
-static int km_sig_set_ctx_params(void *vpkm_sigctx,
-                                  const OSSL_PARAM params[]) {
-    PROV_KMSIG_CTX *pkm_sigctx = (PROV_KMSIG_CTX *)vpkm_sigctx;
-    const OSSL_PARAM *p;
 
-    KM_SIG_PRINTF("KM SIG provider: set_ctx_params called\n");
-    if (pkm_sigctx == NULL || params == NULL)
-        return 0;
+static int km_sig_set_ctx_params(void *vctx, const OSSL_PARAM params[]) {
+    PROV_KMSIG_CTX *c = (PROV_KMSIG_CTX *)vctx;
+    if (!c || !params) return 0;
 
-    p = OSSL_PARAM_locate_const(params, OSSL_SIGNATURE_PARAM_DIGEST);
-    /* Not allowed during certain operations */
-    if (p != NULL && !pkm_sigctx->flag_allow_md)
-        return 0;
-    if (p != NULL) {
-        char mdname[OSSL_MAX_NAME_SIZE] = "", *pmdname = mdname;
-        char mdprops[OSSL_MAX_PROPQUERY_SIZE] = "", *pmdprops = mdprops;
-        const OSSL_PARAM *propsp =
-            OSSL_PARAM_locate_const(params, OSSL_SIGNATURE_PARAM_PROPERTIES);
+    const OSSL_PARAM *p = OSSL_PARAM_locate_const(params, OSSL_SIGNATURE_PARAM_DIGEST);
+    if (p && !c->flag_allow_md) return 0;
+    if (p) {
+        char mdname[OSSL_MAX_NAME_SIZE] = "", *pmd = mdname;
+        char mdprops[OSSL_MAX_PROPQUERY_SIZE] = "", *pprops = mdprops;
+        const OSSL_PARAM *pp = OSSL_PARAM_locate_const(params, OSSL_SIGNATURE_PARAM_PROPERTIES);
 
-        if (!OSSL_PARAM_get_utf8_string(p, &pmdname, sizeof(mdname)))
-            return 0;
-        if (propsp != NULL &&
-            !OSSL_PARAM_get_utf8_string(propsp, &pmdprops, sizeof(mdprops)))
-            return 0;
-        if (!km_sig_setup_md(pkm_sigctx, mdname, mdprops))
-            return 0;
+        if (!OSSL_PARAM_get_utf8_string(p, &pmd, sizeof(mdname))) return 0;
+        if (pp && !OSSL_PARAM_get_utf8_string(pp, &pprops, sizeof(mdprops))) return 0;
+        if (!km_sig_setup_md(c, mdname, mdprops)) return 0;
     }
-
-    // not passing in parameters we can act on is no error
     return 1;
 }
-
 static const OSSL_PARAM known_settable_ctx_params[] = {
     OSSL_PARAM_utf8_string(OSSL_SIGNATURE_PARAM_DIGEST, NULL, 0),
     OSSL_PARAM_utf8_string(OSSL_SIGNATURE_PARAM_PROPERTIES, NULL, 0),
-    OSSL_PARAM_END};
-
-static const OSSL_PARAM *
-km_sig_settable_ctx_params(ossl_unused void *vpsm2ctx,
-                            ossl_unused void *provctx) {
-    /*
-     * TODO(3.0): Should this function return a different set of settable ctx
-     * params if the ctx is being used for a DigestSign/DigestVerify? In that
-     * case it is not allowed to set the digest size/digest name because the
-     * digest is explicitly set as part of the init.
-     * NOTE: Ideally we would check pkm_sigctx->flag_allow_md, but this is
-     * problematic because there is no nice way of passing the
-     * PROV_KMSIG_CTX down to this function...
-     * Because we have API's that dont know about their parent..
-     * e.g: EVP_SIGNATURE_gettable_ctx_params(const EVP_SIGNATURE *sig).
-     * We could pass NULL for that case (but then how useful is the check?).
-     */
-    KM_SIG_PRINTF("KM SIG provider: settable_ctx_params called\n");
-    return known_settable_ctx_params;
+    OSSL_PARAM_END
+};
+static const OSSL_PARAM *km_sig_settable_ctx_params(void *vctx, void *provctx) {
+    (void)vctx; (void)provctx; return known_settable_ctx_params;
 }
 
-static int km_sig_get_ctx_md_params(void *vpkm_sigctx, OSSL_PARAM *params) {
-    PROV_KMSIG_CTX *pkm_sigctx = (PROV_KMSIG_CTX *)vpkm_sigctx;
-
-    KM_SIG_PRINTF("KM SIG provider: get_ctx_md_params called\n");
-    if (pkm_sigctx->mdctx == NULL)
-        return 0;
-
-    return EVP_MD_CTX_get_params(pkm_sigctx->mdctx, params);
+static int km_sig_get_ctx_md_params(void *vctx, OSSL_PARAM *params) {
+    PROV_KMSIG_CTX *c = (PROV_KMSIG_CTX *)vctx;
+    if (!c->mdctx) return 0;
+    return EVP_MD_CTX_get_params(c->mdctx, params);
+}
+static const OSSL_PARAM *km_sig_gettable_ctx_md_params(void *vctx) {
+    PROV_KMSIG_CTX *c = (PROV_KMSIG_CTX *)vctx;
+    if (!c->md) return 0;
+    return EVP_MD_gettable_ctx_params(c->md);
+}
+static int km_sig_set_ctx_md_params(void *vctx, const OSSL_PARAM params[]) {
+    PROV_KMSIG_CTX *c = (PROV_KMSIG_CTX *)vctx;
+    if (!c->mdctx) return 0;
+    return EVP_MD_CTX_set_params(c->mdctx, params);
+}
+static const OSSL_PARAM *km_sig_settable_ctx_md_params(void *vctx) {
+    PROV_KMSIG_CTX *c = (PROV_KMSIG_CTX *)vctx;
+    if (!c->md) return 0;
+    return EVP_MD_settable_ctx_params(c->md);
 }
 
-static const OSSL_PARAM *km_sig_gettable_ctx_md_params(void *vpkm_sigctx) {
-    PROV_KMSIG_CTX *pkm_sigctx = (PROV_KMSIG_CTX *)vpkm_sigctx;
-
-    KM_SIG_PRINTF("KM SIG provider: gettable_ctx_md_params called\n");
-    if (pkm_sigctx->md == NULL)
-        return 0;
-
-    return EVP_MD_gettable_ctx_params(pkm_sigctx->md);
-}
-
-static int km_sig_set_ctx_md_params(void *vpkm_sigctx,
-                                     const OSSL_PARAM params[]) {
-    PROV_KMSIG_CTX *pkm_sigctx = (PROV_KMSIG_CTX *)vpkm_sigctx;
-
-    KM_SIG_PRINTF("KM SIG provider: set_ctx_md_params called\n");
-    if (pkm_sigctx->mdctx == NULL)
-        return 0;
-
-    return EVP_MD_CTX_set_params(pkm_sigctx->mdctx, params);
-}
-
-static const OSSL_PARAM *km_sig_settable_ctx_md_params(void *vpkm_sigctx) {
-    PROV_KMSIG_CTX *pkm_sigctx = (PROV_KMSIG_CTX *)vpkm_sigctx;
-
-    if (pkm_sigctx->md == NULL)
-        return 0;
-
-    KM_SIG_PRINTF("KM SIG provider: settable_ctx_md_params called\n");
-    return EVP_MD_settable_ctx_params(pkm_sigctx->md);
-}
-
+/* ============================================================
+ * DISPATCH TABLE — tetap sama
+ * ============================================================ */
 const OSSL_DISPATCH km_signature_functions[] = {
-    {OSSL_FUNC_SIGNATURE_NEWCTX, (void (*)(void))km_sig_newctx},
-    {OSSL_FUNC_SIGNATURE_SIGN_INIT, (void (*)(void))km_sig_sign_init},
-    {OSSL_FUNC_SIGNATURE_SIGN, (void (*)(void))km_sig_sign},
-    {OSSL_FUNC_SIGNATURE_VERIFY_INIT, (void (*)(void))km_sig_verify_init},
-    {OSSL_FUNC_SIGNATURE_VERIFY, (void (*)(void))km_sig_verify},
-    {OSSL_FUNC_SIGNATURE_DIGEST_SIGN_INIT,
-     (void (*)(void))km_sig_digest_sign_init},
-    {OSSL_FUNC_SIGNATURE_DIGEST_SIGN_UPDATE,
-     (void (*)(void))km_sig_digest_signverify_update},
-    {OSSL_FUNC_SIGNATURE_DIGEST_SIGN_FINAL,
-     (void (*)(void))km_sig_digest_sign_final},
-    {OSSL_FUNC_SIGNATURE_DIGEST_VERIFY_INIT,
-     (void (*)(void))km_sig_digest_verify_init},
-    {OSSL_FUNC_SIGNATURE_DIGEST_VERIFY_UPDATE,
-     (void (*)(void))km_sig_digest_signverify_update},
-    {OSSL_FUNC_SIGNATURE_DIGEST_VERIFY_FINAL,
-     (void (*)(void))km_sig_digest_verify_final},
-    {OSSL_FUNC_SIGNATURE_FREECTX, (void (*)(void))km_sig_freectx},
-    {OSSL_FUNC_SIGNATURE_DUPCTX, (void (*)(void))km_sig_dupctx},
-    {OSSL_FUNC_SIGNATURE_GET_CTX_PARAMS,
-     (void (*)(void))km_sig_get_ctx_params},
-    {OSSL_FUNC_SIGNATURE_GETTABLE_CTX_PARAMS,
-     (void (*)(void))km_sig_gettable_ctx_params},
-    {OSSL_FUNC_SIGNATURE_SET_CTX_PARAMS,
-     (void (*)(void))km_sig_set_ctx_params},
-    {OSSL_FUNC_SIGNATURE_SETTABLE_CTX_PARAMS,
-     (void (*)(void))km_sig_settable_ctx_params},
-    {OSSL_FUNC_SIGNATURE_GET_CTX_MD_PARAMS,
-     (void (*)(void))km_sig_get_ctx_md_params},
-    {OSSL_FUNC_SIGNATURE_GETTABLE_CTX_MD_PARAMS,
-     (void (*)(void))km_sig_gettable_ctx_md_params},
-    {OSSL_FUNC_SIGNATURE_SET_CTX_MD_PARAMS,
-     (void (*)(void))km_sig_set_ctx_md_params},
-    {OSSL_FUNC_SIGNATURE_SETTABLE_CTX_MD_PARAMS,
-     (void (*)(void))km_sig_settable_ctx_md_params},
-    {0, NULL}};
+    { OSSL_FUNC_SIGNATURE_NEWCTX,               (void(*)(void))km_sig_newctx },
+    { OSSL_FUNC_SIGNATURE_SIGN_INIT,           (void(*)(void))km_sig_sign_init },
+    { OSSL_FUNC_SIGNATURE_SIGN,                (void(*)(void))km_sig_sign },
+    { OSSL_FUNC_SIGNATURE_VERIFY_INIT,         (void(*)(void))km_sig_verify_init },
+    { OSSL_FUNC_SIGNATURE_VERIFY,              (void(*)(void))km_sig_verify },
+    { OSSL_FUNC_SIGNATURE_DIGEST_SIGN_INIT,    (void(*)(void))km_sig_digest_sign_init },
+    { OSSL_FUNC_SIGNATURE_DIGEST_SIGN_UPDATE,  (void(*)(void))km_sig_digest_signverify_update },
+    { OSSL_FUNC_SIGNATURE_DIGEST_SIGN_FINAL,   (void(*)(void))km_sig_digest_sign_final },
+    { OSSL_FUNC_SIGNATURE_DIGEST_VERIFY_INIT,  (void(*)(void))km_sig_digest_verify_init },
+    { OSSL_FUNC_SIGNATURE_DIGEST_VERIFY_UPDATE,(void(*)(void))km_sig_digest_signverify_update },
+    { OSSL_FUNC_SIGNATURE_DIGEST_VERIFY_FINAL, (void(*)(void))km_sig_digest_verify_final },
+    { OSSL_FUNC_SIGNATURE_FREECTX,             (void(*)(void))km_sig_freectx },
+    { OSSL_FUNC_SIGNATURE_DUPCTX,              (void(*)(void))km_sig_dupctx },
+    { OSSL_FUNC_SIGNATURE_GET_CTX_PARAMS,      (void(*)(void))km_sig_get_ctx_params },
+    { OSSL_FUNC_SIGNATURE_GETTABLE_CTX_PARAMS, (void(*)(void))km_sig_gettable_ctx_params },
+    { OSSL_FUNC_SIGNATURE_SET_CTX_PARAMS,      (void(*)(void))km_sig_set_ctx_params },
+    { OSSL_FUNC_SIGNATURE_SETTABLE_CTX_PARAMS, (void(*)(void))km_sig_settable_ctx_params },
+    { OSSL_FUNC_SIGNATURE_GET_CTX_MD_PARAMS,   (void(*)(void))km_sig_get_ctx_md_params },
+    { OSSL_FUNC_SIGNATURE_GETTABLE_CTX_MD_PARAMS,(void(*)(void))km_sig_gettable_ctx_md_params },
+    { OSSL_FUNC_SIGNATURE_SET_CTX_MD_PARAMS,   (void(*)(void))km_sig_set_ctx_md_params },
+    { OSSL_FUNC_SIGNATURE_SETTABLE_CTX_MD_PARAMS,(void(*)(void))km_sig_settable_ctx_md_params },
+    { 0, NULL }
+};

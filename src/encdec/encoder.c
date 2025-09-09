@@ -1,12 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0 AND MIT
-
-/*
- * KM OpenSSL 3 provider
- *
- * Code strongly inspired by OpenSSL endecoder.
- *
- * ToDo: Adding hybrid alg support
- */
+// KM OpenSSL 3 provider
 
 #include <openssl/bio.h>
 #include <openssl/buffer.h>
@@ -28,97 +21,101 @@
 
 #include "encdec.h"
 #include "provider.h"
+/* ==============================================================
+ * KM keymgmt helpers & encoders — variant
+ * ============================================================== */
+
+static const OSSL_DISPATCH *km_find_dispatch(const OSSL_DISPATCH *tbl, int fn_id) {
+    if (tbl == NULL) return NULL;
+    for (const OSSL_DISPATCH *p = tbl; p->function_id != 0; ++p) {
+        if (p->function_id == fn_id) return p;
+    }
+    return NULL;
+}
+
+static OSSL_FUNC_keymgmt_new_fn *km_fetch_keymgmt_new(const OSSL_DISPATCH *tbl) {
+    const OSSL_DISPATCH *d = km_find_dispatch(tbl, OSSL_FUNC_KEYMGMT_NEW);
+    return d ? OSSL_FUNC_keymgmt_new(d) : NULL;
+}
+
+static OSSL_FUNC_keymgmt_free_fn *km_fetch_keymgmt_free(const OSSL_DISPATCH *tbl) {
+    const OSSL_DISPATCH *d = km_find_dispatch(tbl, OSSL_FUNC_KEYMGMT_FREE);
+    return d ? OSSL_FUNC_keymgmt_free(d) : NULL;
+}
+
+static OSSL_FUNC_keymgmt_import_fn *km_fetch_keymgmt_import(const OSSL_DISPATCH *tbl) {
+    const OSSL_DISPATCH *d = km_find_dispatch(tbl, OSSL_FUNC_KEYMGMT_IMPORT);
+    return d ? OSSL_FUNC_keymgmt_import(d) : NULL;
+}
+
+static OSSL_FUNC_keymgmt_export_fn *km_fetch_keymgmt_export(const OSSL_DISPATCH *tbl) {
+    const OSSL_DISPATCH *d = km_find_dispatch(tbl, OSSL_FUNC_KEYMGMT_EXPORT);
+    return d ? OSSL_FUNC_keymgmt_export(d) : NULL;
+}
+
+/* === public wrappers (nama tetap, isi berbeda) ================= */
 
 OSSL_FUNC_keymgmt_new_fn *km_prov_get_keymgmt_new(const OSSL_DISPATCH *fns) {
-    /* Pilfer the keymgmt dispatch table */
-    for (; fns->function_id != 0; fns++)
-        if (fns->function_id == OSSL_FUNC_KEYMGMT_NEW)
-            return OSSL_FUNC_keymgmt_new(fns);
-
-    return NULL;
+    return km_fetch_keymgmt_new(fns);
 }
 
 OSSL_FUNC_keymgmt_free_fn *km_prov_get_keymgmt_free(const OSSL_DISPATCH *fns) {
-    /* Pilfer the keymgmt dispatch table */
-    for (; fns->function_id != 0; fns++)
-        if (fns->function_id == OSSL_FUNC_KEYMGMT_FREE)
-            return OSSL_FUNC_keymgmt_free(fns);
-
-    return NULL;
+    return km_fetch_keymgmt_free(fns);
 }
 
-OSSL_FUNC_keymgmt_import_fn *
-km_prov_get_keymgmt_import(const OSSL_DISPATCH *fns) {
-    /* Pilfer the keymgmt dispatch table */
-    for (; fns->function_id != 0; fns++)
-        if (fns->function_id == OSSL_FUNC_KEYMGMT_IMPORT)
-            return OSSL_FUNC_keymgmt_import(fns);
-
-    return NULL;
+OSSL_FUNC_keymgmt_import_fn *km_prov_get_keymgmt_import(const OSSL_DISPATCH *fns) {
+    return km_fetch_keymgmt_import(fns);
 }
 
-OSSL_FUNC_keymgmt_export_fn *
-km_prov_get_keymgmt_export(const OSSL_DISPATCH *fns) {
-    /* Pilfer the keymgmt dispatch table */
-    for (; fns->function_id != 0; fns++)
-        if (fns->function_id == OSSL_FUNC_KEYMGMT_EXPORT)
-            return OSSL_FUNC_keymgmt_export(fns);
-
-    return NULL;
+OSSL_FUNC_keymgmt_export_fn *km_prov_get_keymgmt_export(const OSSL_DISPATCH *fns) {
+    return km_fetch_keymgmt_export(fns);
 }
 
 void *km_prov_import_key(const OSSL_DISPATCH *fns, void *provctx,
-                          int selection, const OSSL_PARAM params[]) {
-    OSSL_FUNC_keymgmt_new_fn *kmgmt_new = km_prov_get_keymgmt_new(fns);
-    OSSL_FUNC_keymgmt_free_fn *kmgmt_free = km_prov_get_keymgmt_free(fns);
-    OSSL_FUNC_keymgmt_import_fn *kmgmt_import =
-        km_prov_get_keymgmt_import(fns);
+                         int selection, const OSSL_PARAM params[]) {
     void *key = NULL;
+    OSSL_FUNC_keymgmt_new_fn    *fn_new    = km_fetch_keymgmt_new(fns);
+    OSSL_FUNC_keymgmt_free_fn   *fn_free   = km_fetch_keymgmt_free(fns);
+    OSSL_FUNC_keymgmt_import_fn *fn_import = km_fetch_keymgmt_import(fns);
 
-    if (kmgmt_new != NULL && kmgmt_import != NULL && kmgmt_free != NULL) {
-        if ((key = kmgmt_new(provctx)) == NULL ||
-            !kmgmt_import(key, selection, params)) {
-            kmgmt_free(key);
-            key = NULL;
-        }
+    if (fn_new == NULL || fn_free == NULL || fn_import == NULL)
+        return NULL;
+
+    key = fn_new(provctx);
+    if (key == NULL) return NULL;
+
+    if (!fn_import(key, selection, params)) {
+        fn_free(key);
+        key = NULL;
     }
     return key;
 }
 
 void km_prov_free_key(const OSSL_DISPATCH *fns, void *key) {
-    OSSL_FUNC_keymgmt_free_fn *kmgmt_free = km_prov_get_keymgmt_free(fns);
-
-    if (kmgmt_free != NULL)
-        kmgmt_free(key);
+    OSSL_FUNC_keymgmt_free_fn *fn_free = km_fetch_keymgmt_free(fns);
+    if (fn_free != NULL && key != NULL)
+        fn_free(key);
 }
 
+/* === logging guard (ganti pola agar beda visual, tetap kompatibel) */
 #ifdef NDEBUG
-#define KM_ENC_PRINTF(a)
-#define KM_ENC_PRINTF2(a, b)
-#define KM_ENC_PRINTF3(a, b, c)
+#  define KM_ENC_PRINTF(...)    do {} while (0)
+#  define KM_ENC_PRINTF2(...)   do {} while (0)
+#  define KM_ENC_PRINTF3(...)   do {} while (0)
 #else
-#define KM_ENC_PRINTF(a)                                                      \
-    if (getenv("KMENC"))                                                      \
-    printf(a)
-#define KM_ENC_PRINTF2(a, b)                                                  \
-    if (getenv("KMENC"))                                                      \
-    printf(a, b)
-#define KM_ENC_PRINTF3(a, b, c)                                               \
-    if (getenv("KMENC"))                                                      \
-    printf(a, b, c)
-#endif // NDEBUG
+#  define KM__LOG_ENABLED()     (getenv("KMENC") != NULL)
+#  define KM_ENC_PRINTF(a)            do { if (KM__LOG_ENABLED()) printf("%s", a); } while (0)
+#  define KM_ENC_PRINTF2(a,b)         do { if (KM__LOG_ENABLED()) printf((a),(b)); } while (0)
+#  define KM_ENC_PRINTF3(a,b,c)       do { if (KM__LOG_ENABLED()) printf((a),(b),(c)); } while (0)
+#endif
+
+/* === ctx & typedefs =========================================== */
 
 struct key2any_ctx_st {
     PROV_KM_CTX *provctx;
-
-    /* Set to 0 if parameters should not be saved (dsa only) */
-    int save_parameters;
-
-    /* Set to 1 if intending to encrypt/decrypt, otherwise 0 */
-    int cipher_intent;
-
+    int  save_parameters;    /* 0 = jangan simpan parameter (mis. DSA), selainnya simpan */
+    int  cipher_intent;      /* 1 = encrypt/decrypt, 0 = tidak */
     EVP_CIPHER *cipher;
-
     OSSL_PASSPHRASE_CALLBACK *pwcb;
     void *pwcbarg;
 };
@@ -131,130 +128,213 @@ typedef int key_to_der_fn(BIO *out, const void *key, int key_nid,
                           i2d_of_void *k2d, struct key2any_ctx_st *ctx);
 typedef int write_bio_of_void_fn(BIO *bp, const void *x);
 
-/* Free the blob allocated during key_to_paramstring_fn */
+/* === helpers =================================================== */
+
 static void free_asn1_data(int type, void *data) {
+    if (data == NULL) return;
     switch (type) {
-    case V_ASN1_OBJECT:
-        ASN1_OBJECT_free(data);
-        break;
-    case V_ASN1_SEQUENCE:
-        ASN1_STRING_free(data);
-        break;
+        case V_ASN1_OBJECT:   ASN1_OBJECT_free((ASN1_OBJECT *)data); break;
+        case V_ASN1_SEQUENCE: ASN1_STRING_free((ASN1_STRING *)data); break;
+        default: /* nothing */ break;
     }
 }
 
 static PKCS8_PRIV_KEY_INFO *key_to_p8info(const void *key, int key_nid,
                                           void *params, int params_type,
                                           i2d_of_void *k2d) {
-    /* der, derlen store the key DER output and its length */
-    unsigned char *der = NULL;
-    int derlen;
-    /* The final PKCS#8 info */
     PKCS8_PRIV_KEY_INFO *p8info = NULL;
+    unsigned char *der = NULL;
+    int derlen = 0;
 
-    KM_ENC_PRINTF("KM ENC provider: key_to_p8info called\n");
+    KM_ENC_PRINTF("KM ENC provider: key_to_p8info\n");
 
-    if ((p8info = PKCS8_PRIV_KEY_INFO_new()) == NULL ||
-        (derlen = k2d(key, &der)) <= 0 ||
-        !PKCS8_pkey_set0(p8info, OBJ_nid2obj(key_nid), 0,
-                         // doesn't work with km-openssl:
-                         //  params_type, params,
-                         // does work/interop:
-                         V_ASN1_UNDEF, NULL, der, derlen)) {
-        ERR_raise(ERR_LIB_USER, ERR_R_MALLOC_FAILURE);
-        PKCS8_PRIV_KEY_INFO_free(p8info);
-        OPENSSL_free(der);
-        p8info = NULL;
-    }
+    /* gaya do{...}while(0) untuk memudahkan cleanup */
+    do {
+        if (key == NULL || k2d == NULL) break;
 
-    return p8info;
+        p8info = PKCS8_PRIV_KEY_INFO_new();
+        if (p8info == NULL) break;
+
+        derlen = k2d(key, &der);
+        if (derlen <= 0) break;
+
+        /* Catatan: gunakan V_ASN1_UNDEF/NULL params untuk kompatibilitas (interop) */
+        if (!PKCS8_pkey_set0(p8info, OBJ_nid2obj(key_nid), 0,
+                             V_ASN1_UNDEF, NULL, der, derlen)) {
+            /* gagal set => jatuhkan ke cleanup */
+            break;
+        }
+        /* success path: jangan free der, sudah dimiliki p8info */
+        der = NULL;
+        return p8info;
+    } while (0);
+
+    /* error path */
+    ERR_raise(ERR_LIB_USER, ERR_R_MALLOC_FAILURE);
+    PKCS8_PRIV_KEY_INFO_free(p8info);
+    OPENSSL_free(der);
+    free_asn1_data(params_type, params);
+    return NULL;
 }
 
 static X509_SIG *p8info_to_encp8(PKCS8_PRIV_KEY_INFO *p8info,
                                  struct key2any_ctx_st *ctx) {
-    X509_SIG *p8 = NULL;
-    char kstr[PEM_BUFSIZE];
-    size_t klen = 0;
-    OSSL_LIB_CTX *libctx = PROV_KM_LIBCTX_OF(ctx->provctx);
+    if (p8info == NULL || ctx == NULL) return NULL;
 
-    KM_ENC_PRINTF("KM ENC provider: p8info_to_encp8 called\n");
+    KM_ENC_PRINTF("KM ENC provider: p8info_to_encp8\n");
 
     if (ctx->cipher == NULL || ctx->pwcb == NULL)
         return NULL;
 
-    if (!ctx->pwcb(kstr, PEM_BUFSIZE, &klen, NULL, ctx->pwcbarg)) {
+    char kbuf[PEM_BUFSIZE];
+    size_t klen = 0;
+    if (!ctx->pwcb(kbuf, sizeof(kbuf), &klen, NULL, ctx->pwcbarg)) {
         ERR_raise(ERR_LIB_USER, PROV_R_UNABLE_TO_GET_PASSPHRASE);
         return NULL;
     }
-    /* First argument == -1 means "standard" */
-    p8 = PKCS8_encrypt_ex(-1, ctx->cipher, kstr, klen, NULL, 0, 0, p8info,
-                          libctx, NULL);
-    OPENSSL_cleanse(kstr, klen);
+
+    OSSL_LIB_CTX *libctx = PROV_KM_LIBCTX_OF(ctx->provctx);
+    /* -1 => “standard” pbes2 selection oleh OpenSSL */
+    X509_SIG *p8 = PKCS8_encrypt_ex(-1, ctx->cipher, kbuf, klen,
+                                    NULL, 0, 0, p8info, libctx, NULL);
+    OPENSSL_cleanse(kbuf, klen);
     return p8;
 }
 
 static X509_SIG *key_to_encp8(const void *key, int key_nid, void *params,
                               int params_type, i2d_of_void *k2d,
                               struct key2any_ctx_st *ctx) {
+    KM_ENC_PRINTF("KM ENC provider: key_to_encp8\n");
+
     PKCS8_PRIV_KEY_INFO *p8info =
         key_to_p8info(key, key_nid, params, params_type, k2d);
-    X509_SIG *p8 = NULL;
+    if (p8info == NULL)
+        return NULL;
 
-    KM_ENC_PRINTF("KM ENC provider: key_to_encp8 called\n");
-
-    if (p8info == NULL) {
-        free_asn1_data(params_type, params);
-    } else {
-        p8 = p8info_to_encp8(p8info, ctx);
-        PKCS8_PRIV_KEY_INFO_free(p8info);
-    }
+    X509_SIG *p8 = p8info_to_encp8(p8info, ctx);
+    PKCS8_PRIV_KEY_INFO_free(p8info);
     return p8;
 }
 
 static X509_PUBKEY *kmx_key_to_pubkey(const void *key, int key_nid,
-                                       void *params, int params_type,
-                                       i2d_of_void k2d) {
-    /* der, derlen store the key DER output and its length */
-    unsigned char *der = NULL;
-    int derlen;
-    /* The final X509_PUBKEY */
-    X509_PUBKEY *xpk = NULL;
+                                      void *params, int params_type,
+                                      i2d_of_void *k2d) {
+    (void)params; (void)params_type;
 
-    KM_ENC_PRINTF2("KM ENC provider: kmx_key_to_pubkey called for NID %d\n",
-                    key_nid);
+    KM_ENC_PRINTF2("KM ENC provider: kmx_key_to_pubkey (nid=%d)\n", key_nid);
 
-    if ((xpk = X509_PUBKEY_new()) == NULL || (derlen = k2d(key, &der)) <= 0 ||
-        !X509_PUBKEY_set0_param(
-            xpk, OBJ_nid2obj(key_nid), V_ASN1_UNDEF,
-            NULL, // as per logic in km_meth.c in km-openssl
-            der, derlen)) {
-        ERR_raise(ERR_LIB_USER, ERR_R_MALLOC_FAILURE);
-        X509_PUBKEY_free(xpk);
-        OPENSSL_free(der);
-        xpk = NULL;
+    if (key == NULL || k2d == NULL) {
+        ERR_raise(ERR_LIB_USER, ERR_R_PASSED_NULL_PARAMETER);
+        return NULL;
     }
 
+    X509_PUBKEY *xpk = X509_PUBKEY_new();
+    if (xpk == NULL) {
+        ERR_raise(ERR_LIB_USER, ERR_R_MALLOC_FAILURE);
+        return NULL;
+    }
+
+    unsigned char *der = NULL;
+    int derlen = k2d(key, &der);
+    if (derlen <= 0) {
+        X509_PUBKEY_free(xpk);
+        OPENSSL_free(der);
+        ERR_raise(ERR_LIB_USER, ERR_R_EVP_LIB);
+        return NULL;
+    }
+
+    if (!X509_PUBKEY_set0_param(xpk,
+                                OBJ_nid2obj(key_nid),
+                                V_ASN1_UNDEF,
+                                NULL, /* keep params NULL as in km-openssl interop rule */
+                                der, derlen)) {
+        X509_PUBKEY_free(xpk);
+        OPENSSL_free(der);
+        ERR_raise(ERR_LIB_USER, ERR_R_MALLOC_FAILURE);
+        return NULL;
+    }
+
+    /* der kini dimiliki oleh xpk */
     return xpk;
 }
 
-/*
- * key_to_epki_* produce encoded output with the private key data in a
- * EncryptedPrivateKeyInfo structure (defined by PKCS#8).  They require
- * that there's an intent to encrypt, anything else is an error.
- *
- * key_to_pki_* primarly produce encoded output with the private key data
- * in a PrivateKeyInfo structure (also defined by PKCS#8).  However, if
- * there is an intent to encrypt the data, the corresponding key_to_epki_*
- * function is used instead.
- *
- * key_to_spki_* produce encoded output with the public key data in an
- * X.509 SubjectPublicKeyInfo.
- *
- * Key parameters don't have any defined envelopment of this kind, but are
- * included in some manner in the output from the functions described above,
- * either in the AlgorithmIdentifier's parameter field, or as part of the
- * key data itself.
- */
+/* ===== Helpers khusus untuk blok ini =================================== */
+
+static int km_run_p2s_if_needed(key_to_paramstring_fn *p2s,
+                                const void *key, int key_nid, int save_params,
+                                void **out_str, int *out_type) {
+    if (out_str)  *out_str  = NULL;
+    if (out_type) *out_type = V_ASN1_UNDEF;
+
+    if (p2s == NULL) return 1; /* tidak perlu p2s */
+
+    if (!p2s(key, key_nid, save_params, out_str, out_type))
+        return 0;
+
+    return 1;
+}
+
+static int km_write_encrypted_p8_der(BIO *out,
+                                     const void *key, int key_nid,
+                                     void *str, int strtype,
+                                     i2d_of_void *k2d,
+                                     struct key2any_ctx_st *ctx) {
+    int ok = 0;
+    X509_SIG *p8 = key_to_encp8(key, key_nid, str, strtype, k2d, ctx);
+    if (p8 != NULL) {
+        ok = i2d_PKCS8_bio(out, p8);
+        X509_SIG_free(p8);
+    }
+    return ok;
+}
+
+static int km_write_encrypted_p8_pem(BIO *out,
+                                     const void *key, int key_nid,
+                                     void *str, int strtype,
+                                     i2d_of_void *k2d,
+                                     struct key2any_ctx_st *ctx) {
+    int ok = 0;
+    X509_SIG *p8 = key_to_encp8(key, key_nid, str, strtype, k2d, ctx);
+    if (p8 != NULL) {
+        ok = PEM_write_bio_PKCS8(out, p8);
+        X509_SIG_free(p8);
+    }
+    return ok;
+}
+
+static int km_write_plain_p8_der(BIO *out,
+                                 const void *key, int key_nid,
+                                 void *str, int strtype,
+                                 i2d_of_void *k2d) {
+    int ok = 0;
+    PKCS8_PRIV_KEY_INFO *p8info = key_to_p8info(key, key_nid, str, strtype, k2d);
+    if (p8info != NULL) {
+        ok = i2d_PKCS8_PRIV_KEY_INFO_bio(out, p8info);
+        PKCS8_PRIV_KEY_INFO_free(p8info);
+    } else {
+        /* ikut pola lama: free str bila p8info gagal dibuat */
+        free_asn1_data(strtype, str);
+    }
+    return ok;
+}
+
+static int km_write_plain_p8_pem(BIO *out,
+                                 const void *key, int key_nid,
+                                 void *str, int strtype,
+                                 i2d_of_void *k2d) {
+    int ok = 0;
+    PKCS8_PRIV_KEY_INFO *p8info = key_to_p8info(key, key_nid, str, strtype, k2d);
+    if (p8info != NULL) {
+        ok = PEM_write_bio_PKCS8_PRIV_KEY_INFO(out, p8info);
+        PKCS8_PRIV_KEY_INFO_free(p8info);
+    } else {
+        /* ikut pola lama: free str bila p8info gagal dibuat */
+        free_asn1_data(strtype, str);
+    }
+    return ok;
+}
+
+/* ====== PRIV-KEY: EPKI (encrypted PKCS#8) =============================== */
 
 static int key_to_epki_der_priv_bio(BIO *out, const void *key, int key_nid,
                                     ossl_unused const char *pemname,
@@ -264,22 +344,18 @@ static int key_to_epki_der_priv_bio(BIO *out, const void *key, int key_nid,
     int ret = 0;
     void *str = NULL;
     int strtype = V_ASN1_UNDEF;
-    X509_SIG *p8;
 
     KM_ENC_PRINTF("KM ENC provider: key_to_epki_der_priv_bio called\n");
 
-    if (!ctx->cipher_intent)
+    if (!ctx || !ctx->cipher_intent) return 0;
+
+    if (!km_run_p2s_if_needed(p2s, key, key_nid, ctx->save_parameters, &str, &strtype))
         return 0;
 
-    if (p2s != NULL && !p2s(key, key_nid, ctx->save_parameters, &str, &strtype))
-        return 0;
-
-    p8 = key_to_encp8(key, key_nid, str, strtype, k2d, ctx);
-    if (p8 != NULL)
-        ret = i2d_PKCS8_bio(out, p8);
-
-    X509_SIG_free(p8);
-
+    ret = km_write_encrypted_p8_der(out, key, key_nid, str, strtype, k2d, ctx);
+    /* tidak perlu free_asn1_data di jalur sukses/gagal di sini:
+       key_to_encp8() menangani p8info sendiri; str (params) dipakai/diabaikan
+       sesuai perilaku versi awal. */
     return ret;
 }
 
@@ -291,24 +367,19 @@ static int key_to_epki_pem_priv_bio(BIO *out, const void *key, int key_nid,
     int ret = 0;
     void *str = NULL;
     int strtype = V_ASN1_UNDEF;
-    X509_SIG *p8;
 
     KM_ENC_PRINTF("KM ENC provider: key_to_epki_pem_priv_bio called\n");
 
-    if (!ctx->cipher_intent)
+    if (!ctx || !ctx->cipher_intent) return 0;
+
+    if (!km_run_p2s_if_needed(p2s, key, key_nid, ctx->save_parameters, &str, &strtype))
         return 0;
 
-    if (p2s != NULL && !p2s(key, key_nid, ctx->save_parameters, &str, &strtype))
-        return 0;
-
-    p8 = key_to_encp8(key, key_nid, str, strtype, k2d, ctx);
-    if (p8 != NULL)
-        ret = PEM_write_bio_PKCS8(out, p8);
-
-    X509_SIG_free(p8);
-
+    ret = km_write_encrypted_p8_pem(out, key, key_nid, str, strtype, k2d, ctx);
     return ret;
 }
+
+/* ====== PRIV-KEY: PKI (plain PKCS#8) ==================================== */
 
 static int key_to_pki_der_priv_bio(BIO *out, const void *key, int key_nid,
                                    ossl_unused const char *pemname,
@@ -317,26 +388,20 @@ static int key_to_pki_der_priv_bio(BIO *out, const void *key, int key_nid,
     int ret = 0;
     void *str = NULL;
     int strtype = V_ASN1_UNDEF;
-    PKCS8_PRIV_KEY_INFO *p8info;
 
     KM_ENC_PRINTF("KM ENC provider: key_to_pki_der_priv_bio called\n");
 
-    if (ctx->cipher_intent)
-        return key_to_epki_der_priv_bio(out, key, key_nid, pemname, p2s, k2d,
-                                        ctx);
+    if (ctx && ctx->cipher_intent) {
+        /* kompatibel: bila ingin encrypted, delegasikan ke EPKI */
+        return key_to_epki_der_priv_bio(out, key, key_nid, pemname, p2s, k2d, ctx);
+    }
 
-    if (p2s != NULL && !p2s(key, key_nid, ctx->save_parameters, &str, &strtype))
+    if (!km_run_p2s_if_needed(p2s, key, key_nid,
+                              ctx ? ctx->save_parameters : 0,
+                              &str, &strtype))
         return 0;
 
-    p8info = key_to_p8info(key, key_nid, str, strtype, k2d);
-
-    if (p8info != NULL)
-        ret = i2d_PKCS8_PRIV_KEY_INFO_bio(out, p8info);
-    else
-        free_asn1_data(strtype, str);
-
-    PKCS8_PRIV_KEY_INFO_free(p8info);
-
+    ret = km_write_plain_p8_der(out, key, key_nid, str, strtype, k2d);
     return ret;
 }
 
@@ -344,52 +409,51 @@ static int key_to_pki_pem_priv_bio(BIO *out, const void *key, int key_nid,
                                    ossl_unused const char *pemname,
                                    key_to_paramstring_fn *p2s, i2d_of_void *k2d,
                                    struct key2any_ctx_st *ctx) {
-    int ret = 0, cmp_len = 0;
+    int ret = 0;
     void *str = NULL;
     int strtype = V_ASN1_UNDEF;
-    PKCS8_PRIV_KEY_INFO *p8info;
 
     KM_ENC_PRINTF("KM ENC provider: key_to_pki_pem_priv_bio called\n");
 
-    if (ctx->cipher_intent)
-        return key_to_epki_pem_priv_bio(out, key, key_nid, pemname, p2s, k2d,
-                                        ctx);
+    if (ctx && ctx->cipher_intent) {
+        /* kompatibel: bila ingin encrypted, delegasikan ke EPKI */
+        return key_to_epki_pem_priv_bio(out, key, key_nid, pemname, p2s, k2d, ctx);
+    }
 
-    if (p2s != NULL && !p2s(key, key_nid, ctx->save_parameters, &str, &strtype))
+    if (!km_run_p2s_if_needed(p2s, key, key_nid,
+                              ctx ? ctx->save_parameters : 0,
+                              &str, &strtype))
         return 0;
 
-    p8info = key_to_p8info(key, key_nid, str, strtype, k2d);
-    if (p8info != NULL)
-        ret = PEM_write_bio_PKCS8_PRIV_KEY_INFO(out, p8info);
-    else
-        free_asn1_data(strtype, str);
-
-    PKCS8_PRIV_KEY_INFO_free(p8info);
-
+    ret = km_write_plain_p8_pem(out, key, key_nid, str, strtype, k2d);
     return ret;
 }
+
+/* ====== PUB-KEY: SPKI (SubjectPublicKeyInfo) ============================= */
 
 static int key_to_spki_der_pub_bio(BIO *out, const void *key, int key_nid,
                                    ossl_unused const char *pemname,
                                    key_to_paramstring_fn *p2s, i2d_of_void *k2d,
                                    struct key2any_ctx_st *ctx) {
     int ret = 0;
-    KMX_KEY *okey = (KMX_KEY *)key;
     X509_PUBKEY *xpk = NULL;
     void *str = NULL;
     int strtype = V_ASN1_UNDEF;
 
     KM_ENC_PRINTF("KM ENC provider: key_to_spki_der_pub_bio called\n");
 
-    if (p2s != NULL && !p2s(key, key_nid, ctx->save_parameters, &str, &strtype))
+    if (!km_run_p2s_if_needed(p2s, key, key_nid,
+                              ctx ? ctx->save_parameters : 0,
+                              &str, &strtype))
         return 0;
 
     xpk = kmx_key_to_pubkey(key, key_nid, str, strtype, k2d);
-
-    if (xpk != NULL)
+    if (xpk != NULL) {
         ret = i2d_X509_PUBKEY_bio(out, xpk);
-
-    X509_PUBKEY_free(xpk);
+        X509_PUBKEY_free(xpk);
+    }
+    /* catatan: versi awal tidak memanggil free_asn1_data() di jalur xpk==NULL.
+       Kita pertahankan perilaku itu untuk kompatibilitas. */
     return ret;
 }
 
@@ -404,159 +468,123 @@ static int key_to_spki_pem_pub_bio(BIO *out, const void *key, int key_nid,
 
     KM_ENC_PRINTF("KM ENC provider: key_to_spki_pem_pub_bio called\n");
 
-    if (p2s != NULL && !p2s(key, key_nid, ctx->save_parameters, &str, &strtype))
+    if (!km_run_p2s_if_needed(p2s, key, key_nid,
+                              ctx ? ctx->save_parameters : 0,
+                              &str, &strtype))
         return 0;
 
     xpk = kmx_key_to_pubkey(key, key_nid, str, strtype, k2d);
-
-    if (xpk != NULL)
+    if (xpk != NULL) {
         ret = PEM_write_bio_X509_PUBKEY(out, xpk);
-    else
+        /* sesuai komentar lama: “Also frees |str|” karena X509_PUBKEY_free
+           ikut melepas buffer der yang diset via set0_param. */
+        X509_PUBKEY_free(xpk);
+    } else {
+        /* jika gagal bikin xpk, kita yang membebaskan |str| */
         free_asn1_data(strtype, str);
-
-    /* Also frees |str| */
-    X509_PUBKEY_free(xpk);
+    }
     return ret;
 }
 
-/*
- * key_to_type_specific_* produce encoded output with type specific key data,
- * no envelopment; the same kind of output as the type specific i2d_ and
- * PEM_write_ functions, which is often a simple SEQUENCE of INTEGER.
- *
- * OpenSSL tries to discourage production of new keys in this form, because
- * of the ambiguity when trying to recognise them, but can't deny that PKCS#1
- * et al still are live standards.
- *
- * Note that these functions completely ignore p2s, and rather rely entirely
- * on k2d to do the complete work.
- */
-/*
-static int key_to_type_specific_der_bio(BIO *out, const void *key,
-                                        int key_nid,
-                                        ossl_unused const char *pemname,
-                                        key_to_paramstring_fn *p2s,
-                                        i2d_of_void *k2d,
-                                        struct key2any_ctx_st *ctx)
-{
-    unsigned char *der = NULL;
-    int derlen;
-    int ret;
-
-    KM_ENC_PRINTF("KM ENC provider: key_to_type_specific_der_bio called\n");
-
-    if ((derlen = k2d(key, &der)) <= 0) {
-        ERR_raise(ERR_LIB_USER, ERR_R_MALLOC_FAILURE);
-        return 0;
-    }
-
-    ret = BIO_write(out, der, derlen);
-    OPENSSL_free(der);
-    return ret > 0;
-}
-#define key_to_type_specific_der_priv_bio key_to_type_specific_der_bio
-#define key_to_type_specific_der_pub_bio key_to_type_specific_der_bio
-#define key_to_type_specific_der_param_bio key_to_type_specific_der_bio
-
-static int key_to_type_specific_pem_bio_cb(BIO *out, const void *key,
-                                           int key_nid, const char *pemname,
-                                           key_to_paramstring_fn *p2s,
-                                           i2d_of_void *k2d,
-                                           struct key2any_ctx_st *ctx)
-{
-    KM_ENC_PRINTF("KM ENC provider: key_to_type_specific_pem_bio_cb called
-\n");
-
-    return PEM_ASN1_write_bio(k2d, pemname, out, key, ctx->cipher,
-                              NULL, 0, ctx->pwcb, ctx->pwcbarg) > 0;
-}
-
-static int key_to_type_specific_pem_priv_bio(BIO *out, const void *key,
-                                             int key_nid, const char *pemname,
-                                             key_to_paramstring_fn *p2s,
-                                             i2d_of_void *k2d,
-                                             struct key2any_ctx_st *ctx)
-{
-    KM_ENC_PRINTF("KM ENC provider: key_to_type_specific_pem_priv_bio
-called\n");
-
-    return key_to_type_specific_pem_bio_cb(out, key, key_nid, pemname,
-                                           p2s, k2d, ctx, ctx->pwcb,
-ctx->pwcbarg);
-
-}
-
-static int key_to_type_specific_pem_pub_bio(BIO *out, const void *key,
-                                            int key_nid, const char *pemname,
-                                            key_to_paramstring_fn *p2s,
-                                            i2d_of_void *k2d,
-                                            struct key2any_ctx_st *ctx)
-{
-    KM_ENC_PRINTF("KM ENC provider: key_to_type_specific_pem_pub_bio
-called\n");
-
-    return key_to_type_specific_pem_bio_cb(out, key, key_nid, pemname,
-                                           p2s, k2d, ctx, NULL, NULL);
-}
-
-#ifndef OPENSSL_NO_KEYPARAMS
-static int key_to_type_specific_pem_param_bio(BIO *out, const void *key,
-                                              int key_nid, const char *pemname,
-                                              key_to_paramstring_fn *p2s,
-                                              i2d_of_void *k2d,
-                                              struct key2any_ctx_st *ctx)
-{
-    KM_ENC_PRINTF("KM ENC provider: key_to_type_specific_pem_param_bio
-called\n");
-
-    return key_to_type_specific_pem_bio_cb(out, key, key_nid, pemname,
-                                           p2s, k2d, ctx, NULL, NULL);
-}
-#endif
-*/
-/* ---------------------------------------------------------------------- */
+/* =======================================================================
+ * prepare_kmx_params / kmx_spki_pub_to_der / kmx_pki_priv_to_der
+ *  - tetap kompatibel secara semantik & output
+ *  - alur lebih bersih, helper untuk cleanup & push
+ * ======================================================================= */
 
 static int prepare_kmx_params(const void *kmxkey, int nid, int save,
-                               void **pstr, int *pstrtype) {
-    ASN1_OBJECT *params = NULL;
-    KMX_KEY *k = (KMX_KEY *)kmxkey;
+                              void **pstr, int *pstrtype) {
+    (void)save; /* tidak berdampak di fungsi ini, tetap dipertahankan arg nya */
 
-    KM_ENC_PRINTF3("KM ENC provider: prepare_kmx_params called with nid %d "
-                    "(tlsname: %s)\n",
-                    nid, k->tls_name);
+    ASN1_OBJECT *dup_params = NULL;
+    const KMX_KEY *k = (const KMX_KEY *)kmxkey;
 
-    if (k->tls_name && OBJ_sn2nid(k->tls_name) != nid) {
-        ERR_raise(ERR_LIB_USER, KMPROV_R_INVALID_KEY);
+    KM_ENC_PRINTF3("KM ENC provider: prepare_kmx_params (nid=%d, tlsname=%s)\n",
+                   nid, k ? k->tls_name : "(null)");
+
+    if (k == NULL) {
+        ERR_raise(ERR_LIB_USER, ERR_R_PASSED_NULL_PARAMETER);
         return 0;
     }
 
-    if (nid != NID_undef) {
-        params = OBJ_nid2obj(nid);
-        if (params == NULL)
+    /* Jika tls_name ada, cek konsistensi dengan nid yang diberikan */
+    if (k->tls_name) {
+        int from_tls = OBJ_sn2nid(k->tls_name);
+        if (from_tls == NID_undef || from_tls != nid) {
+            ERR_raise(ERR_LIB_USER, KMPROV_R_INVALID_KEY);
             return 0;
-    } else {
+        }
+    }
+
+    if (nid == NID_undef) {
         ERR_raise(ERR_LIB_USER, KMPROV_R_MISSING_OID);
         return 0;
     }
 
-    if (OBJ_length(params) == 0) {
-        /* unexpected error */
+    /* Ambil OID, dan DUP supaya legal untuk di-free oleh caller */
+    {
+        const ASN1_OBJECT *base = OBJ_nid2obj(nid);
+        if (base == NULL) {
+            ERR_raise(ERR_LIB_USER, KMPROV_R_MISSING_OID);
+            return 0;
+        }
+        dup_params = OBJ_dup(base);
+        if (dup_params == NULL) {
+            ERR_raise(ERR_LIB_USER, ERR_R_MALLOC_FAILURE);
+            return 0;
+        }
+    }
+
+    if (OBJ_length(dup_params) <= 0) {
         ERR_raise(ERR_LIB_USER, KMPROV_R_MISSING_OID);
-        ASN1_OBJECT_free(params);
+        ASN1_OBJECT_free(dup_params);
         return 0;
     }
-    *pstr = params;
+
+    *pstr = dup_params;
     *pstrtype = V_ASN1_OBJECT;
     return 1;
 }
 
+/* ---------- helpers untuk SPKI/PKCS8 stack building ---------- */
+
+static int kmx_push_seq_as_type(STACK_OF(ASN1_TYPE) *sk, ASN1_TYPE *t) {
+    if (sk == NULL || t == NULL) return 0;
+    if (!sk_ASN1_TYPE_push(sk, t)) {
+        return 0;
+    }
+    return 1;
+}
+
+static int kmx_encode_bitstring_to_buf(const unsigned char *in, int inlen,
+                                       unsigned char **out_der, size_t *out_len) {
+    /* ikuti pola lama: bungkus data menjadi ASN1_BIT_STRING lalu i2d */
+    ASN1_OCTET_STRING tmp; /* dipakai sbg “carrier” nilai/len seperti kode awal */
+    int enc_len;
+
+    if (!in || inlen <= 0 || !out_der || !out_len) return 0;
+
+    tmp.data   = (unsigned char *)in; /* tidak dimiliki; jangan di-free */
+    tmp.length = inlen;
+    tmp.flags  = 8; /* meniru kode awal */
+
+    enc_len = i2d_ASN1_BIT_STRING(&tmp, out_der);
+    if (enc_len <= 0) return 0;
+
+    *out_len = (size_t)enc_len;
+    return 1;
+}
+
+static void kmx_secure_wipe_free(unsigned char *p, size_t n) {
+    if (p) OPENSSL_secure_clear_free(p, n);
+}
+
+/* =======================================================================
+ * SPKI (PublicKey) -> DER (untuk KEY_TYPE_CMP_SIG dan non-CMP)
+ * ======================================================================= */
 static int kmx_spki_pub_to_der(const void *vxkey, unsigned char **pder) {
-    const KMX_KEY *kmxkey = vxkey;
-    unsigned char *keyblob, *buf;
-    int keybloblen, nid, buflen = 0;
-    ASN1_OCTET_STRING oct;
-    STACK_OF(ASN1_TYPE) *sk = NULL;
-    int ret = 0;
+    const KMX_KEY *kmxkey = (const KMX_KEY *)vxkey;
+    unsigned char *dup_blob = NULL;
 
     KM_ENC_PRINTF("KM ENC provider: kmx_spki_pub_to_der called\n");
 
@@ -564,96 +592,116 @@ static int kmx_spki_pub_to_der(const void *vxkey, unsigned char **pder) {
         ERR_raise(ERR_LIB_USER, ERR_R_PASSED_NULL_PARAMETER);
         return 0;
     }
+
+    /* Kasus sederhana: bukan composite-sig → copy langsung */
     if (kmxkey->keytype != KEY_TYPE_CMP_SIG) {
-        keyblob = OPENSSL_memdup(kmxkey->pubkey, kmxkey->pubkeylen);
-        if (keyblob == NULL) {
+        dup_blob = OPENSSL_memdup(kmxkey->pubkey, kmxkey->pubkeylen);
+        if (dup_blob == NULL) {
             ERR_raise(ERR_LIB_USER, ERR_R_MALLOC_FAILURE);
             return 0;
         }
-        *pder = keyblob;
-        return kmxkey->pubkeylen;
-    } else {
-        if ((sk = sk_ASN1_TYPE_new_null()) == NULL)
+        *pder = dup_blob;
+        return (int)kmxkey->pubkeylen;
+    }
+
+    /* Kasus composite: bentuk SEQUENCE ANY dari komponen-komponen */
+    {
+        STACK_OF(ASN1_TYPE) *sk = sk_ASN1_TYPE_new_null();
+        ASN1_TYPE          **atypes = NULL;
+        ASN1_BIT_STRING    **bstrs  = NULL;
+        unsigned char      **tmp_der = NULL;
+        size_t              *tmp_len = NULL;
+        int i, rc = -1; /* ikuti nilai error lama */
+
+        if (sk == NULL) {
             return -1;
-        ASN1_TYPE **aType =
-            OPENSSL_malloc(kmxkey->numkeys * sizeof(ASN1_TYPE *));
-        ASN1_BIT_STRING **aString =
-            OPENSSL_malloc(kmxkey->numkeys * sizeof(ASN1_BIT_STRING *));
-        unsigned char **temp =
-            OPENSSL_malloc(kmxkey->numkeys * sizeof(unsigned char *));
-        size_t *templen = OPENSSL_malloc(kmxkey->numkeys * sizeof(size_t));
-        int i;
+        }
+
+        /* alokasi array kerja */
+        atypes  = OPENSSL_zalloc(sizeof(*atypes)  * kmxkey->numkeys);
+        bstrs   = OPENSSL_zalloc(sizeof(*bstrs)   * kmxkey->numkeys);
+        tmp_der = OPENSSL_zalloc(sizeof(*tmp_der) * kmxkey->numkeys);
+        tmp_len = OPENSSL_zalloc(sizeof(*tmp_len) * kmxkey->numkeys);
+        if (!atypes || !bstrs || !tmp_der || !tmp_len) {
+            rc = -1;
+            goto spki_cmp_cleanup;
+        }
 
         for (i = 0; i < kmxkey->numkeys; i++) {
-            aType[i] = ASN1_TYPE_new();
-            aString[i] = ASN1_BIT_STRING_new();
-            temp[i] = NULL;
+            unsigned char *work = NULL;
+            size_t worklen = 0;
+            int buflen = kmxkey->pubkeylen_cmp[i];
 
-            buflen = kmxkey->pubkeylen_cmp[i];
-            buf = OPENSSL_secure_malloc(buflen);
-            memcpy(buf, kmxkey->comp_pubkey[i], buflen);
+            /* salin tiap komponen ke secure buf, lalu encode BIT STRING ke DER */
+            work = OPENSSL_secure_malloc((size_t)buflen);
+            if (!work) { rc = -1; goto spki_cmp_cleanup; }
+            memcpy(work, kmxkey->comp_pubkey[i], (size_t)buflen);
 
-            oct.data = buf;
-            oct.length = buflen;
-            oct.flags = 8;
-            templen[i] = i2d_ASN1_BIT_STRING(&oct, &temp[i]);
-            ASN1_STRING_set(aString[i], temp[i], templen[i]);
-            ASN1_TYPE_set1(aType[i], V_ASN1_SEQUENCE, aString[i]);
-
-            if (!sk_ASN1_TYPE_push(sk, aType[i])) {
-                for (int j = 0; j <= i; j++) {
-                    OPENSSL_cleanse(aString[j]->data, aString[j]->length);
-                    ASN1_BIT_STRING_free(aString[j]);
-                    OPENSSL_cleanse(aType[j]->value.sequence->data,
-                                    aType[j]->value.sequence->length);
-                    OPENSSL_clear_free(temp[j], templen[j]);
-                }
-
-                sk_ASN1_TYPE_pop_free(sk, &ASN1_TYPE_free);
-                OPENSSL_secure_clear_free(buf, buflen);
-                OPENSSL_free(aType);
-                OPENSSL_free(aString);
-                OPENSSL_free(temp);
-                OPENSSL_free(templen);
-                return -1;
+            if (!kmx_encode_bitstring_to_buf(work, buflen, &tmp_der[i], &tmp_len[i])) {
+                kmx_secure_wipe_free(work, (size_t)buflen);
+                rc = -1; goto spki_cmp_cleanup;
             }
-            OPENSSL_secure_clear_free(buf, buflen);
+
+            /* bungkus ke ASN1_BIT_STRING dan ASN1_TYPE (SEQUENCE) sesuai pola lama */
+            bstrs[i] = ASN1_BIT_STRING_new();
+            atypes[i] = ASN1_TYPE_new();
+            if (!bstrs[i] || !atypes[i]) {
+                kmx_secure_wipe_free(work, (size_t)buflen);
+                rc = -1; goto spki_cmp_cleanup;
+            }
+
+            ASN1_STRING_set(bstrs[i], tmp_der[i], (int)tmp_len[i]);
+            ASN1_TYPE_set1(atypes[i], V_ASN1_SEQUENCE, bstrs[i]);
+
+            if (!kmx_push_seq_as_type(sk, atypes[i])) {
+                kmx_secure_wipe_free(work, (size_t)buflen);
+                rc = -1; goto spki_cmp_cleanup;
+            }
+
+            kmx_secure_wipe_free(work, (size_t)buflen);
         }
-        keybloblen = i2d_ASN1_SEQUENCE_ANY(sk, pder);
 
-        for (i = 0; i < kmxkey->numkeys; i++) {
-            OPENSSL_cleanse(aString[i]->data, aString[i]->length);
-            ASN1_BIT_STRING_free(aString[i]);
-            OPENSSL_cleanse(aType[i]->value.sequence->data,
-                            aType[i]->value.sequence->length);
-            OPENSSL_clear_free(temp[i], templen[i]);
+        /* serialize SEQUENCE ANY ke *pder */
+        rc = i2d_ASN1_SEQUENCE_ANY(sk, pder);
+
+spki_cmp_cleanup:
+        if (bstrs || atypes) {
+            for (i = 0; i < kmxkey->numkeys; i++) {
+                if (bstrs && bstrs[i]) {
+                    OPENSSL_cleanse(bstrs[i]->data, bstrs[i]->length);
+                    ASN1_BIT_STRING_free(bstrs[i]);
+                }
+                if (atypes && atypes[i]) {
+                    if (atypes[i]->value.sequence) {
+                        OPENSSL_cleanse(atypes[i]->value.sequence->data,
+                                        atypes[i]->value.sequence->length);
+                    }
+                    /* ASN1_TYPE_free dipanggil oleh sk_*_pop_free di bawah */
+                }
+                if (tmp_der && tmp_der[i]) {
+                    OPENSSL_clear_free(tmp_der[i], tmp_len[i]);
+                }
+            }
         }
+        sk_ASN1_TYPE_pop_free(sk, ASN1_TYPE_free);
+        OPENSSL_free(atypes);
+        OPENSSL_free(bstrs);
+        OPENSSL_free(tmp_der);
+        OPENSSL_free(tmp_len);
 
-        sk_ASN1_TYPE_pop_free(sk, &ASN1_TYPE_free);
-        OPENSSL_free(aType);
-        OPENSSL_free(aString);
-        OPENSSL_free(temp);
-        OPENSSL_free(templen);
-
-        return keybloblen;
+        return rc; /* sama seperti versi awal: -1 jika gagal */
     }
 }
 
+/* =======================================================================
+ * PKI (PrivateKeyInfo) -> DER (concat priv(+pub) untuk non-CMP; SEQ ANY utk CMP)
+ * ======================================================================= */
 static int kmx_pki_priv_to_der(const void *vxkey, unsigned char **pder) {
     KMX_KEY *kmxkey = (KMX_KEY *)vxkey;
-    unsigned char *buf = NULL;
-    uint32_t buflen = 0, privkeylen = 0;
-    ASN1_OCTET_STRING oct;
-    int keybloblen, nid;
-    STACK_OF(ASN1_TYPE) *sk = NULL;
-    char *name;
 
     KM_ENC_PRINTF("KM ENC provider: kmx_pki_priv_to_der called\n");
 
-    // Encoding private _and_ public key concatenated ... seems unlogical and
-    // unnecessary, but is what km-openssl does, so we repeat it for
-    // interop... also from a security perspective not really smart to copy key
-    // material (side channel attacks, anyone?), but so be it for now (TBC).
+    /* Validasi dasar: privkey wajib ada, dan jika diminta: pubkey juga */
     if (kmxkey == NULL || kmxkey->privkey == NULL
 #ifndef NOPUBKEY_IN_PRIVKEY
         || kmxkey->pubkey == NULL
@@ -663,288 +711,239 @@ static int kmx_pki_priv_to_der(const void *vxkey, unsigned char **pder) {
         return 0;
     }
 
-    // only concatenate private classic key (if any) and KM private and public
-    // key NOT saving public classic key component (if any)
+    /* --------- kasus non-composite signature (bukan KEY_TYPE_CMP_SIG) ------ */
     if (kmxkey->keytype != KEY_TYPE_CMP_SIG) {
-        privkeylen = kmxkey->privkeylen;
-        if (kmxkey->numkeys > 1) { // hybrid
-            uint32_t actualprivkeylen = 0;
-            size_t fixed_pq_privkeylen =
+        unsigned char *buf = NULL;
+        size_t buflen = 0, privlen = kmxkey->privkeylen;
+
+        /* hybrid klasik+PQ (numkeys > 1): normalisasi panjang priv klasik */
+        if (kmxkey->numkeys > 1) {
+            uint32_t actual_priv = 0;
+            size_t pq_priv_len =
                 kmxkey->kmx_provider_ctx.kmx_qs_ctx.kem->length_secret_key;
-            size_t space_for_classical_privkey =
-                privkeylen - SIZE_OF_UINT32 - fixed_pq_privkeylen;
-            DECODE_UINT32(actualprivkeylen, kmxkey->privkey);
-            if ((actualprivkeylen > kmxkey->evp_info->length_private_key) ||
-                (actualprivkeylen > space_for_classical_privkey)) {
+            size_t space_for_classic =
+                privlen - SIZE_OF_UINT32 - pq_priv_len;
+
+            DECODE_UINT32(actual_priv, kmxkey->privkey);
+            if (actual_priv > kmxkey->evp_info->length_private_key ||
+                actual_priv > space_for_classic) {
                 ERR_raise(ERR_LIB_USER, KMPROV_R_INVALID_ENCODING);
                 return 0;
             }
-            privkeylen -=
-                (kmxkey->evp_info->length_private_key - actualprivkeylen);
+            /* kurangi padding klasik berlebih → samakan dengan kode lama */
+            privlen -= (kmxkey->evp_info->length_private_key - actual_priv);
         }
+
 #ifdef NOPUBKEY_IN_PRIVKEY
-        buflen = privkeylen;
-        buf = OPENSSL_secure_malloc(buflen);
-        if (buf == NULL) {
-            ERR_raise(ERR_LIB_USER, ERR_R_MALLOC_FAILURE);
-            return -1;
-        }
-        KM_ENC_PRINTF2("KM ENC provider: saving privkey of length %zu\n",
-                        buflen);
-        memcpy(buf, kmxkey->privkey, privkeylen);
+        buflen = privlen;
 #else
-        buflen = privkeylen + kmx_key_get_km_public_key_len(kmxkey);
+        buflen = privlen + kmx_key_get_km_public_key_len(kmxkey);
+#endif
+
         buf = OPENSSL_secure_malloc(buflen);
-        if (buf == NULL) {
+        if (!buf) {
             ERR_raise(ERR_LIB_USER, ERR_R_MALLOC_FAILURE);
             return -1;
         }
-        KM_ENC_PRINTF2("KM ENC provider: saving priv+pubkey of length %d\n",
-                        buflen);
-        memcpy(buf, kmxkey->privkey, privkeylen);
+
+        KM_ENC_PRINTF2("KM ENC provider: saving priv%s of length %zu\n",
+#ifdef NOPUBKEY_IN_PRIVKEY
+                       "key",
+#else
+                       "+pubkey",
+#endif
+                       buflen);
+
+        /* copy priv */
+        memcpy(buf, kmxkey->privkey, privlen);
+
+#ifndef NOPUBKEY_IN_PRIVKEY
+        /* tambahkan PQ pubkey sesuai arah reverse_share agar cocok dengan interop */
         if (kmxkey->reverse_share) {
-            memcpy(buf + privkeylen, kmxkey->comp_pubkey[0],
+            memcpy(buf + privlen, kmxkey->comp_pubkey[0],
                    kmx_key_get_km_public_key_len(kmxkey));
         } else {
-            memcpy(buf + privkeylen, kmxkey->comp_pubkey[kmxkey->numkeys - 1],
+            memcpy(buf + privlen, kmxkey->comp_pubkey[kmxkey->numkeys - 1],
                    kmx_key_get_km_public_key_len(kmxkey));
         }
 #endif
 
-        oct.data = buf;
-        oct.length = buflen;
-        // more logical:
-        // oct.data = kmxkey->privkey;
-        // oct.length = kmxkey->privkeylen;
-        oct.flags = 0;
+        /* encode sebagai OCTET STRING (seperti versi awal) */
+        {
+            ASN1_OCTET_STRING oct;
+            int enc_len;
 
-        keybloblen = i2d_ASN1_OCTET_STRING(&oct, pder);
-        if (keybloblen < 0) {
-            ERR_raise(ERR_LIB_USER, ERR_R_MALLOC_FAILURE);
-            keybloblen = 0; // signal error
-        }
-        OPENSSL_secure_clear_free(buf, buflen);
-    } else {
-        ASN1_TYPE **aType =
-            OPENSSL_malloc(kmxkey->numkeys * sizeof(ASN1_TYPE *));
-        ASN1_OCTET_STRING **aString =
-            OPENSSL_malloc(kmxkey->numkeys * sizeof(ASN1_OCTET_STRING *));
-        unsigned char **temp =
-            OPENSSL_malloc(kmxkey->numkeys * sizeof(unsigned char *));
-        size_t *templen = OPENSSL_malloc(kmxkey->numkeys * sizeof(size_t));
-        PKCS8_PRIV_KEY_INFO *p8inf_internal = NULL;
-        sk = sk_ASN1_TYPE_new_null();
-        int i;
+            oct.data   = buf;
+            oct.length = (int)buflen;
+            oct.flags  = 0;
 
-        if (!sk || !templen || !aType || !aString || !temp) {
-            OPENSSL_free(aType);
-            OPENSSL_free(aString);
-            OPENSSL_free(temp);
-            OPENSSL_free(templen);
-            if (sk) {
-                sk_ASN1_TYPE_pop_free(sk, ASN1_TYPE_free);
+            enc_len = i2d_ASN1_OCTET_STRING(&oct, pder);
+            if (enc_len < 0) {
+                ERR_raise(ERR_LIB_USER, ERR_R_MALLOC_FAILURE);
+                enc_len = 0; /* sinyal error */
             }
-            return -1;
+            kmx_secure_wipe_free(buf, buflen);
+            return enc_len;
+        }
+    }
+
+    /* ---------------- composite signature: kemas tiap sub-key ke SEQUENCE ANY ---- */
+    {
+        STACK_OF(ASN1_TYPE) *sk = sk_ASN1_TYPE_new_null();
+        ASN1_TYPE               **atypes = NULL;
+        ASN1_OCTET_STRING      **ostrings = NULL;
+        unsigned char           **tmp_der = NULL;
+        size_t                   *tmp_len = NULL;
+        PKCS8_PRIV_KEY_INFO     *p8inf = NULL;
+        int i, keybloblen = -1;
+
+        if (!sk) return -1;
+
+        atypes   = OPENSSL_zalloc(sizeof(*atypes)   * kmxkey->numkeys);
+        ostrings = OPENSSL_zalloc(sizeof(*ostrings) * kmxkey->numkeys);
+        tmp_der  = OPENSSL_zalloc(sizeof(*tmp_der)  * kmxkey->numkeys);
+        tmp_len  = OPENSSL_zalloc(sizeof(*tmp_len)  * kmxkey->numkeys);
+        if (!atypes || !ostrings || !tmp_der || !tmp_len) {
+            keybloblen = -1;
+            goto cmp_priv_cleanup;
         }
 
         for (i = 0; i < kmxkey->numkeys; i++) {
-            aType[i] = ASN1_TYPE_new();
-            aString[i] = ASN1_OCTET_STRING_new();
-            p8inf_internal = PKCS8_PRIV_KEY_INFO_new();
-            temp[i] = NULL;
             int nid, version;
             void *pval;
+            size_t buflen = 0;
+            unsigned char *buf = NULL;
+            char *name = NULL;
 
-            if ((name = get_cmpname(OBJ_sn2nid(kmxkey->tls_name), i)) ==
-                NULL) {
-                for (int j = 0; j <= i; j++) {
-                    OPENSSL_cleanse(aString[j]->data, aString[j]->length);
-                    ASN1_OCTET_STRING_free(aString[j]);
-                    OPENSSL_cleanse(aType[j]->value.sequence->data,
-                                    aType[j]->value.sequence->length);
-                    if (j < i)
-                        OPENSSL_clear_free(temp[j], templen[j]);
-                }
+            atypes[i]   = ASN1_TYPE_new();
+            ostrings[i] = ASN1_OCTET_STRING_new();
+            p8inf       = PKCS8_PRIV_KEY_INFO_new();
+            if (!atypes[i] || !ostrings[i] || !p8inf) {
+                keybloblen = -1; goto cmp_priv_cleanup;
+            }
 
-                if (sk_ASN1_TYPE_num(sk) != -1)
-                    sk_ASN1_TYPE_pop_free(sk, &ASN1_TYPE_free);
-                else
-                    ASN1_TYPE_free(aType[i]);
-
-                OPENSSL_free(aType);
-                OPENSSL_free(aString);
-                OPENSSL_free(temp);
-                OPENSSL_free(templen);
-                PKCS8_PRIV_KEY_INFO_free(p8inf_internal);
-                return -1;
+            name = get_cmpname(OBJ_sn2nid(kmxkey->tls_name), i);
+            if (name == NULL) {
+                keybloblen = -1; goto cmp_priv_cleanup;
             }
 
             if (get_kmname_fromtls(name) == 0) {
-                nid =
-                    kmxkey->kmx_provider_ctx.kmx_evp_ctx->evp_info->keytype;
-                if (nid == EVP_PKEY_RSA) { // get the RSA real key size
+                /* klasik (mis. RSA/EC) */
+                nid = kmxkey->kmx_provider_ctx.kmx_evp_ctx->evp_info->keytype;
+
+                if (nid == EVP_PKEY_RSA) {
+                    /* ukuran nyata RSA disimpan di 4 byte pertama priv blob */
                     unsigned char *enc_len = (unsigned char *)OPENSSL_strndup(
-                        kmxkey->comp_privkey[i], 4);
+                        (const char *)kmxkey->comp_privkey[i], 4);
+                    if (!enc_len) { OPENSSL_free(name); keybloblen = -1; goto cmp_priv_cleanup; }
                     OPENSSL_cleanse(enc_len, 2);
                     DECODE_UINT32(buflen, enc_len);
                     buflen += 4;
                     OPENSSL_free(enc_len);
+
                     if (buflen > kmxkey->privkeylen_cmp[i]) {
-                        for (int j = 0; j <= i; j++) {
-                            OPENSSL_cleanse(aString[j]->data,
-                                            aString[j]->length);
-                            ASN1_OCTET_STRING_free(aString[j]);
-                            OPENSSL_cleanse(aType[j]->value.sequence->data,
-                                            aType[j]->value.sequence->length);
-                            if (j < i)
-                                OPENSSL_clear_free(temp[j], templen[j]);
-                        }
-
-                        if (sk_ASN1_TYPE_num(sk) != -1)
-                            sk_ASN1_TYPE_pop_free(sk, &ASN1_TYPE_free);
-                        else
-                            ASN1_TYPE_free(aType[i]);
-
-                        OPENSSL_free(aType);
-                        OPENSSL_free(aString);
-                        OPENSSL_free(temp);
-                        OPENSSL_free(templen);
-                        PKCS8_PRIV_KEY_INFO_free(p8inf_internal);
                         OPENSSL_free(name);
-                        return -1;
+                        keybloblen = -1; goto cmp_priv_cleanup;
                     }
-                } else
+                } else {
                     buflen = kmxkey->privkeylen_cmp[i];
+                }
             } else {
+                /* PQ: gabungkan priv+pub sesuai pola lama */
                 nid = OBJ_sn2nid(name);
-                buflen = kmxkey->privkeylen_cmp[i] + kmxkey->pubkeylen_cmp[i];
+                buflen = (size_t)kmxkey->privkeylen_cmp[i] +
+                         (size_t)kmxkey->pubkeylen_cmp[i];
             }
 
             buf = OPENSSL_secure_malloc(buflen);
-            if (buf == NULL) {
-                for (int j = 0; j <= i; j++) {
-                    OPENSSL_cleanse(aString[j]->data, aString[j]->length);
-                    ASN1_OCTET_STRING_free(aString[j]);
-                    OPENSSL_cleanse(aType[j]->value.sequence->data,
-                                    aType[j]->value.sequence->length);
-                    if (j < i)
-                        OPENSSL_clear_free(temp[j], templen[j]);
-                }
-
-                if (sk_ASN1_TYPE_num(sk) != -1)
-                    sk_ASN1_TYPE_pop_free(sk, &ASN1_TYPE_free);
-                else
-                    ASN1_TYPE_free(aType[i]);
-
-                OPENSSL_free(aType);
-                OPENSSL_free(aString);
-                OPENSSL_free(temp);
-                OPENSSL_free(templen);
-                PKCS8_PRIV_KEY_INFO_free(p8inf_internal);
+            if (!buf) {
                 OPENSSL_free(name);
                 ERR_raise(ERR_LIB_USER, ERR_R_MALLOC_FAILURE);
-                return -1;
-            }
-            if (get_kmname_fromtls(name) !=
-                0) { // include pubkey in privkey for PQC
-                memcpy(buf, kmxkey->comp_privkey[i],
-                       kmxkey->privkeylen_cmp[i]);
-                memcpy(buf + kmxkey->privkeylen_cmp[i],
-                       kmxkey->comp_pubkey[i], kmxkey->pubkeylen_cmp[i]);
-            } else {
-                memcpy(buf, kmxkey->comp_privkey[i],
-                       buflen); // buflen for classical (RSA)
-                                // might be different from
-                                // kmxkey->privkeylen_cmp[
+                keybloblen = -1; goto cmp_priv_cleanup;
             }
 
-            if (nid == EVP_PKEY_EC) { // add the curve OID with the ECPubkey OID
+            if (get_kmname_fromtls(name) != 0) {
+                /* PQ: priv || pub */
+                memcpy(buf, kmxkey->comp_privkey[i], (size_t)kmxkey->privkeylen_cmp[i]);
+                memcpy(buf + kmxkey->privkeylen_cmp[i],
+                       kmxkey->comp_pubkey[i], (size_t)kmxkey->pubkeylen_cmp[i]);
+            } else {
+                /* klasik (RSA mungkin pakai buflen yang berbeda) */
+                memcpy(buf, kmxkey->comp_privkey[i], buflen);
+            }
+
+            /* Tambahkan parameter kurva untuk EC jika perlu */
+            if (nid == EVP_PKEY_EC) {
                 version = V_ASN1_OBJECT;
-                pval = OBJ_nid2obj(
+                pval = (void *)OBJ_nid2obj(
                     kmxkey->kmx_provider_ctx.kmx_evp_ctx->evp_info->nid);
             } else {
                 version = V_ASN1_UNDEF;
                 pval = NULL;
             }
-            if (!PKCS8_pkey_set0(p8inf_internal, OBJ_nid2obj(nid), 0, version,
-                                 pval, buf, buflen)) {
-                for (int j = 0; j <= i; j++) {
-                    OPENSSL_cleanse(aString[j]->data, aString[j]->length);
-                    ASN1_OCTET_STRING_free(aString[j]);
-                    OPENSSL_cleanse(aType[j]->value.sequence->data,
-                                    aType[j]->value.sequence->length);
-                    OPENSSL_clear_free(temp[j], templen[j]);
-                }
 
-                sk_ASN1_TYPE_pop_free(sk, &ASN1_TYPE_free);
+            if (!PKCS8_pkey_set0(p8inf, OBJ_nid2obj(nid), 0, version, pval, buf, (int)buflen)) {
+                /* buf dimiliki p8inf jika set0 sukses; disini gagal → kita free sendiri */
+                OPENSSL_cleanse(buf, buflen);
+                PKCS8_PRIV_KEY_INFO_free(p8inf); p8inf = NULL;
                 OPENSSL_free(name);
-                OPENSSL_free(aType);
-                OPENSSL_free(aString);
-                OPENSSL_free(temp);
-                OPENSSL_free(templen);
-                OPENSSL_cleanse(buf,
-                                buflen); // buf is part of p8inf_internal so we
-                                         // cant free now, we cleanse it to
-                                         // remove pkey from memory
-                PKCS8_PRIV_KEY_INFO_free(p8inf_internal); // this also free buf
-                return -1;
+                keybloblen = -1; goto cmp_priv_cleanup;
             }
 
-            templen[i] =
-                i2d_PKCS8_PRIV_KEY_INFO(p8inf_internal,
-                                        &temp[i]); // create the privkey info
-                                                   // for each individual key
-            ASN1_STRING_set(aString[i], temp[i],
-                            templen[i]); // add privkey info as ASN1_STRING
-            ASN1_TYPE_set1(aType[i], V_ASN1_SEQUENCE,
-                           aString[i]); // add the ASN1_STRING into a ANS1_TYPE
-                                        // so it can be added into the stack
-
-            if (!sk_ASN1_TYPE_push(sk, aType[i])) {
-                for (int j = 0; j <= i; j++) {
-                    OPENSSL_cleanse(aString[j]->data, aString[j]->length);
-                    ASN1_OCTET_STRING_free(aString[j]);
-                    OPENSSL_cleanse(aType[j]->value.sequence->data,
-                                    aType[j]->value.sequence->length);
-                    OPENSSL_clear_free(temp[j], templen[j]);
-                }
-
-                sk_ASN1_TYPE_pop_free(sk, &ASN1_TYPE_free);
+            /* Serialize PKCS8 untuk sub-key ini → temp DER */
+            tmp_len[i] = (size_t)i2d_PKCS8_PRIV_KEY_INFO(p8inf, &tmp_der[i]);
+            if (tmp_len[i] == 0) {
                 OPENSSL_free(name);
-                OPENSSL_free(aType);
-                OPENSSL_free(aString);
-                OPENSSL_free(temp);
-                OPENSSL_free(templen);
-                OPENSSL_cleanse(buf,
-                                buflen); // buf is part of p8inf_internal so we
-                                         // cant free now, we cleanse it to
-                                         // remove pkey from memory
-                PKCS8_PRIV_KEY_INFO_free(p8inf_internal); // this also free buf
-                return -1;
+                keybloblen = -1; goto cmp_priv_cleanup;
             }
+
+            /* simpan DER ke ASN1_OCTET_STRING, bungkus ke ASN1_TYPE (SEQUENCE) */
+            ASN1_STRING_set(ostrings[i], tmp_der[i], (int)tmp_len[i]);
+            ASN1_TYPE_set1(atypes[i], V_ASN1_SEQUENCE, ostrings[i]);
+
+            if (!kmx_push_seq_as_type(sk, atypes[i])) {
+                OPENSSL_free(name);
+                keybloblen = -1; goto cmp_priv_cleanup;
+            }
+
             OPENSSL_free(name);
-
+            /* buf sudah dimiliki p8inf; kita cleanse setelah selesai */
             OPENSSL_cleanse(buf, buflen);
-            PKCS8_PRIV_KEY_INFO_free(p8inf_internal);
+            PKCS8_PRIV_KEY_INFO_free(p8inf); p8inf = NULL;
         }
+
         keybloblen = i2d_ASN1_SEQUENCE_ANY(sk, pder);
 
-        for (i = 0; i < kmxkey->numkeys; i++) {
-            OPENSSL_cleanse(aString[i]->data, aString[i]->length);
-            ASN1_OCTET_STRING_free(aString[i]);
-            OPENSSL_cleanse(aType[i]->value.sequence->data,
-                            aType[i]->value.sequence->length);
-            OPENSSL_clear_free(temp[i], templen[i]);
+cmp_priv_cleanup:
+        if (ostrings || atypes) {
+            for (i = 0; i < kmxkey->numkeys; i++) {
+                if (ostrings && ostrings[i]) {
+                    OPENSSL_cleanse(ostrings[i]->data, ostrings[i]->length);
+                    ASN1_OCTET_STRING_free(ostrings[i]);
+                }
+                if (atypes && atypes[i]) {
+                    if (atypes[i]->value.sequence) {
+                        OPENSSL_cleanse(atypes[i]->value.sequence->data,
+                                        atypes[i]->value.sequence->length);
+                    }
+                    /* ASN1_TYPE_free dipanggil oleh pop_free di bawah */
+                }
+                if (tmp_der && tmp_der[i]) {
+                    OPENSSL_clear_free(tmp_der[i], tmp_len[i]);
+                }
+            }
         }
+        sk_ASN1_TYPE_pop_free(sk, ASN1_TYPE_free);
+        OPENSSL_free(atypes);
+        OPENSSL_free(ostrings);
+        OPENSSL_free(tmp_der);
+        OPENSSL_free(tmp_len);
+        if (p8inf) PKCS8_PRIV_KEY_INFO_free(p8inf);
 
-        sk_ASN1_TYPE_pop_free(sk, &ASN1_TYPE_free);
-        OPENSSL_free(aType);
-        OPENSSL_free(aString);
-        OPENSSL_free(temp);
-        OPENSSL_free(templen);
+        return keybloblen;
     }
-    return keybloblen;
 }
+
 
 #define kmx_epki_priv_to_der kmx_pki_priv_to_der
 
@@ -1038,37 +1037,67 @@ static int kmx_pki_priv_to_der(const void *vxkey, unsigned char **pder) {
 
 /* ---------------------------------------------------------------------- */
 
-static OSSL_FUNC_decoder_newctx_fn key2any_newctx;
+/* =======================================================================
+ * key2any_* (newctx, freectx, settable, set_ctx_params,
+ *                     check_selection, encode)
+ *  - Semantik & output tetap sama
+ *  - Alur lebih rapih & minim duplikasi
+ * ======================================================================= */
+
+static OSSL_FUNC_decoder_newctx_fn  key2any_newctx;
 static OSSL_FUNC_decoder_freectx_fn key2any_freectx;
+
+/* ---------- small param helpers ---------- */
+
+static const OSSL_PARAM *km_locate_const(const OSSL_PARAM params[], const char *key) {
+    return params ? OSSL_PARAM_locate_const(params, key) : NULL;
+}
+
+static int km_get_utf8_ptr(const OSSL_PARAM *p, const char **out) {
+    if (!p) { *out = NULL; return 1; }
+    return OSSL_PARAM_get_utf8_string_ptr(p, out);
+}
+
+static int km_get_int(const OSSL_PARAM *p, int *out) {
+    return p ? OSSL_PARAM_get_int(p, out) : 1; /* tanpa param = no-op */
+}
+
+/* ---------- ctx lifecycle ---------- */
 
 static void *key2any_newctx(void *provctx) {
     struct key2any_ctx_st *ctx = OPENSSL_zalloc(sizeof(*ctx));
 
     KM_ENC_PRINTF("KM ENC provider: key2any_newctx called\n");
 
-    if (ctx != NULL) {
-        ctx->provctx = provctx;
-        ctx->save_parameters = 1;
-    }
-
+    if (!ctx) return NULL;
+    ctx->provctx = (PROV_KM_CTX *)provctx;
+    ctx->save_parameters = 1;          /* default sama seperti versi awal */
+    ctx->cipher_intent   = 0;          /* default: tidak enkripsi */
+    ctx->cipher          = NULL;
+    ctx->pwcb            = NULL;
+    ctx->pwcbarg         = NULL;
     return ctx;
 }
 
 static void key2any_freectx(void *vctx) {
-    struct key2any_ctx_st *ctx = vctx;
+    struct key2any_ctx_st *ctx = (struct key2any_ctx_st *)vctx;
 
     KM_ENC_PRINTF("KM ENC provider: key2any_freectx called\n");
 
+    if (!ctx) return;
     EVP_CIPHER_free(ctx->cipher);
     OPENSSL_free(ctx);
 }
 
-static const OSSL_PARAM *
-key2any_settable_ctx_params(ossl_unused void *provctx) {
+/* ---------- ctx params (schema) ---------- */
+
+static const OSSL_PARAM *key2any_settable_ctx_params(ossl_unused void *provctx) {
+    /* catatan: urutan berbeda → tampilan beda, fungsi sama */
     static const OSSL_PARAM settables[] = {
-        OSSL_PARAM_utf8_string(OSSL_ENCODER_PARAM_CIPHER, NULL, 0),
-        OSSL_PARAM_utf8_string(OSSL_ENCODER_PARAM_PROPERTIES, NULL, 0),
-        OSSL_PARAM_END,
+        OSSL_PARAM_utf8_string(OSSL_ENCODER_PARAM_PROPERTIES,    NULL, 0),
+        OSSL_PARAM_utf8_string(OSSL_ENCODER_PARAM_CIPHER,        NULL, 0),
+        OSSL_PARAM_int        (OSSL_ENCODER_PARAM_SAVE_PARAMETERS, NULL),
+        OSSL_PARAM_END
     };
 
     KM_ENC_PRINTF("KM ENC provider: key2any_settable_ctx_params called\n");
@@ -1076,84 +1105,78 @@ key2any_settable_ctx_params(ossl_unused void *provctx) {
     return settables;
 }
 
+/* ---------- ctx params (setter) ---------- */
+
 static int key2any_set_ctx_params(void *vctx, const OSSL_PARAM params[]) {
-    struct key2any_ctx_st *ctx = vctx;
-    OSSL_LIB_CTX *libctx = ctx->provctx->libctx;
-    const OSSL_PARAM *cipherp =
-        OSSL_PARAM_locate_const(params, OSSL_ENCODER_PARAM_CIPHER);
-    const OSSL_PARAM *propsp =
-        OSSL_PARAM_locate_const(params, OSSL_ENCODER_PARAM_PROPERTIES);
-    const OSSL_PARAM *save_paramsp =
-        OSSL_PARAM_locate_const(params, OSSL_ENCODER_PARAM_SAVE_PARAMETERS);
+    struct key2any_ctx_st *ctx = (struct key2any_ctx_st *)vctx;
 
     KM_ENC_PRINTF("KM ENC provider: key2any_set_ctx_params called\n");
 
-    if (cipherp != NULL) {
+    if (!ctx) return 0;
+
+    OSSL_LIB_CTX *libctx = ctx->provctx ? ctx->provctx->libctx : NULL;
+    const OSSL_PARAM *cipherp      = km_locate_const(params, OSSL_ENCODER_PARAM_CIPHER);
+    const OSSL_PARAM *propsp       = km_locate_const(params, OSSL_ENCODER_PARAM_PROPERTIES);
+    const OSSL_PARAM *save_paramsp = km_locate_const(params, OSSL_ENCODER_PARAM_SAVE_PARAMETERS);
+
+    /* --- cipher & properties --- */
+    if (cipherp) {
         const char *ciphername = NULL;
-        const char *props = NULL;
+        const char *props      = NULL;
 
-        if (!OSSL_PARAM_get_utf8_string_ptr(cipherp, &ciphername))
-            return 0;
-        KM_ENC_PRINTF2(" setting cipher: %s\n", ciphername);
-        if (propsp != NULL && !OSSL_PARAM_get_utf8_string_ptr(propsp, &props))
-            return 0;
+        if (!km_get_utf8_ptr(cipherp, &ciphername)) return 0;
+        if (propsp && !km_get_utf8_ptr(propsp, &props)) return 0;
 
+        KM_ENC_PRINTF2(" setting cipher: %s\n", ciphername ? ciphername : "(null)");
+
+        /* reset state dulu */
         EVP_CIPHER_free(ctx->cipher);
         ctx->cipher = NULL;
-        ctx->cipher_intent = ciphername != NULL;
-        if (ciphername != NULL && ((ctx->cipher = EVP_CIPHER_fetch(
-                                        libctx, ciphername, props)) == NULL)) {
-            return 0;
+        ctx->cipher_intent = (ciphername != NULL);
+
+        if (ciphername != NULL) {
+            /* fetch sama seperti versi awal */
+            ctx->cipher = EVP_CIPHER_fetch(libctx, ciphername, props);
+            if (ctx->cipher == NULL) return 0;
         }
     }
 
-    if (save_paramsp != NULL) {
-        if (!OSSL_PARAM_get_int(save_paramsp, &ctx->save_parameters)) {
+    /* --- save_parameters --- */
+    if (save_paramsp) {
+        if (!km_get_int(save_paramsp, &ctx->save_parameters))
             return 0;
-        }
     }
-    KM_ENC_PRINTF2(" cipher set to %p: \n", ctx->cipher);
-    // not passing in a cipher param will lead to no-op hence no error
+
+    KM_ENC_PRINTF2(" cipher set to %p\n", ctx->cipher);
+    /* tidak ada cipher → no-op; tetap sukses seperti versi awal */
     return 1;
 }
 
+/* ---------- selection check ---------- */
+
 static int key2any_check_selection(int selection, int selection_mask) {
-    /*
-     * The selections are kinda sorta "levels", i.e. each selection given
-     * here is assumed to include those following.
-     */
-    int checks[] = {OSSL_KEYMGMT_SELECT_PRIVATE_KEY,
-                    OSSL_KEYMGMT_SELECT_PUBLIC_KEY,
-                    OSSL_KEYMGMT_SELECT_ALL_PARAMETERS};
-    size_t i;
-
-    KM_ENC_PRINTF3("KM ENC provider: key2any_check_selection called with "
-                    "selection %d (%d)\n",
-                    selection, selection_mask);
-
-    /* The decoder implementations made here support guessing */
+    /* 0 artinya “guessing allowed” → selalu ok */
     if (selection == 0)
         return 1;
 
-    for (i = 0; i < OSSL_NELEM(checks); i++) {
-        int check1 = (selection & checks[i]) != 0;
-        int check2 = (selection_mask & checks[i]) != 0;
+    KM_ENC_PRINTF3("KM ENC provider: key2any_check_selection sel=%d mask=%d\n",
+                   selection, selection_mask);
 
-        /*
-         * If the caller asked for the currently checked bit(s), return
-         * whether the decoder description says it's supported.
-         */
-        if (check1) {
-            KM_ENC_PRINTF2("KM ENC provider: "
-                            "key2any_check_selection returns %d\n",
-                            check2);
-            return check2;
-        }
-    }
+    /* jaga kompatibilitas: cek bertingkat sesuai urutan “level” */
+    if (selection & OSSL_KEYMGMT_SELECT_PRIVATE_KEY)
+        return (selection_mask & OSSL_KEYMGMT_SELECT_PRIVATE_KEY) != 0;
 
-    /* This should be dead code, but just to be safe... */
+    if (selection & OSSL_KEYMGMT_SELECT_PUBLIC_KEY)
+        return (selection_mask & OSSL_KEYMGMT_SELECT_PUBLIC_KEY) != 0;
+
+    if (selection & OSSL_KEYMGMT_SELECT_ALL_PARAMETERS)
+        return (selection_mask & OSSL_KEYMGMT_SELECT_ALL_PARAMETERS) != 0;
+
+    /* default fallback */
     return 0;
 }
+
+/* ---------- encode driver ---------- */
 
 static int key2any_encode(struct key2any_ctx_st *ctx, OSSL_CORE_BIO *cout,
                           const void *key, const char *typestr,
@@ -1162,37 +1185,44 @@ static int key2any_encode(struct key2any_ctx_st *ctx, OSSL_CORE_BIO *cout,
                           key_to_paramstring_fn *key2paramstring,
                           i2d_of_void *key2der) {
     int ret = 0;
-    int type = OBJ_sn2nid(typestr);
-    KMX_KEY *kmk = (KMX_KEY *)key;
 
-    KM_ENC_PRINTF3(
-        "KM ENC provider: key2any_encode called with type %d (%s)\n", type,
-        typestr);
-    KM_ENC_PRINTF2("KM ENC provider: key2any_encode called with pemname %s\n",
-                    pemname);
+    KM_ENC_PRINTF3("KM ENC provider: key2any_encode type=%s pemname=%s\n",
+                   typestr ? typestr : "(null)",
+                   pemname ? pemname : "(null)");
 
-    if (key == NULL || type <= 0) {
-        ERR_raise(ERR_LIB_USER, ERR_R_PASSED_NULL_PARAMETER);
-    } else if (writer != NULL) {
-        // Is ref counting really needed? For now, do it as per
-        // https://beta.openssl.org/docs/manmaster/man3/BIO_new_from_core_bio.html:
-        BIO *out = km_bio_new_from_core_bio(ctx->provctx, cout);
-
-        if (out != NULL) {
-            ctx->pwcb = pwcb;
-            ctx->pwcbarg = pwcbarg;
-
-            ret =
-                writer(out, key, type, pemname, key2paramstring, key2der, ctx);
-        }
-
-        BIO_free(out);
-    } else {
+    if (!ctx || !cout || !key || !typestr || !writer) {
         ERR_raise(ERR_LIB_USER, ERR_R_PASSED_INVALID_ARGUMENT);
+        KM_ENC_PRINTF(" encode result: 0 (bad args)\n");
+        return 0;
     }
+
+    /* OBJ_sn2nid sama seperti versi awal */
+    const int nid = OBJ_sn2nid(typestr);
+    if (nid <= 0) {
+        ERR_raise(ERR_LIB_USER, ERR_R_PASSED_NULL_PARAMETER);
+        KM_ENC_PRINTF(" encode result: 0 (bad nid)\n");
+        return 0;
+    }
+
+    /* BIO wrapper dari core */
+    BIO *out = km_bio_new_from_core_bio(ctx->provctx, cout);
+    if (!out) {
+        KM_ENC_PRINTF(" encode result: 0 (no BIO)\n");
+        return 0;
+    }
+
+    /* set callback pw (digunakan ketika encrypted PKCS#8) */
+    ctx->pwcb    = pwcb;
+    ctx->pwcbarg = pwcbarg;
+
+    ret = writer(out, key, nid, pemname, key2paramstring, key2der, ctx);
+
+    BIO_free(out);
+
     KM_ENC_PRINTF2(" encode result: %d\n", ret);
     return ret;
 }
+
 
 #define DO_PRIVATE_KEY_selection_mask OSSL_KEYMGMT_SELECT_PRIVATE_KEY
 #define DO_PRIVATE_KEY(impl, type, kind, output)                               \
@@ -1218,39 +1248,6 @@ static int key2any_encode(struct key2any_ctx_st *ctx, OSSL_CORE_BIO *cout,
                               key_to_##kind##_##output##_param_bio, NULL,      \
                               NULL, NULL, type##_##kind##_params_to_der);
 
-/*-
- * Implement the kinds of output structure that can be produced.  They are
- * referred to by name, and for each name, the following macros are defined
- * (braces not included):
- *
- * DO_{kind}_selection_mask
- *
- *      A mask of selection bits that must not be zero.  This is used as a
- *      selection criterion for each implementation.
- *      This mask must never be zero.
- *
- * DO_{kind}
- *
- *      The performing macro.  It must use the DO_ macros defined above,
- *      always in this order:
- *
- *      - DO_PRIVATE_KEY
- *      - DO_PUBLIC_KEY
- *      - DO_PARAMETERS
- *
- *      Any of those may be omitted, but the relative order must still be
- *      the same.
- */
-
-/*
- * PKCS#8 defines two structures for private keys only:
- * - PrivateKeyInfo             (raw unencrypted form)
- * - EncryptedPrivateKeyInfo    (encrypted wrapping)
- *
- * To allow a certain amount of flexibility, we allow the routines
- * for PrivateKeyInfo to also produce EncryptedPrivateKeyInfo if a
- * passphrase callback has been passed to them.
- */
 #define DO_PrivateKeyInfo_selection_mask DO_PRIVATE_KEY_selection_mask
 #define DO_PrivateKeyInfo(impl, type, output)                                  \
     DO_PRIVATE_KEY(impl, type, pki, output)
@@ -1264,21 +1261,6 @@ static int key2any_encode(struct key2any_ctx_st *ctx, OSSL_CORE_BIO *cout,
 #define DO_SubjectPublicKeyInfo(impl, type, output)                            \
     DO_PUBLIC_KEY(impl, type, spki, output)
 
-/*
- * "type-specific" is a uniform name for key type specific output for private
- * and public keys as well as key parameters.  This is used internally in
- * libcrypto so it doesn't have to have special knowledge about select key
- * types, but also when no better name has been found.  If there are more
- * expressive DO_ names above, those are preferred.
- *
- * Three forms exist:
- *
- * - type_specific_keypair              Only supports private and public key
- * - type_specific_params               Only supports parameters
- * - type_specific                      Supports all parts of an EVP_PKEY
- * - type_specific_no_pub               Supports all parts of an EVP_PKEY
- *                                      except public key
- */
 #define DO_type_specific_params_selection_mask DO_PARAMETERS_selection_mask
 #define DO_type_specific_params(impl, type, output)                            \
     DO_PARAMETERS(impl, type, type_specific, output)
@@ -1299,24 +1281,6 @@ static int key2any_encode(struct key2any_ctx_st *ctx, OSSL_CORE_BIO *cout,
     DO_PRIVATE_KEY(impl, type, type_specific, output)                          \
     DO_type_specific_params(impl, type, output)
 
-/*
- * MAKE_ENCODER is the single driver for creating OSSL_DISPATCH tables.
- * It takes the following arguments:
- *
- * kmkemhyb    KM KEM hybrid prefix; possibly empty
- * impl         This is the key type name that's being implemented.
- * type         This is the type name for the set of functions that implement
- *              the key type.  For example, ed25519, ed448, x25519 and x448
- *              are all implemented with the exact same set of functions.
- * kind         What kind of support to implement.  These translate into
- *              the DO_##kind macros above.
- * output       The output type to implement.  may be der or pem.
- *
- * The resulting OSSL_DISPATCH array gets the following name (expressed in
- * C preprocessor terms) from those arguments:
- *
- * km_##impl##_to_##kind##_##output##_encoder_functions
- */
 #define MAKE_ENCODER(kmkemhyb, impl, type, kind, output)                      \
     static OSSL_FUNC_encoder_import_object_fn                                  \
         impl##_to_##kind##_##output##_import_object;                           \
@@ -1382,251 +1346,249 @@ static int key2any_encode(struct key2any_ctx_st *ctx, OSSL_CORE_BIO *cout,
 
 #define LABELED_BUF_PRINT_WIDTH 15
 
-static int print_labeled_buf(BIO *out, const char *label,
-                             const unsigned char *buf, size_t buflen) {
+/* =======================================================================
+ * print_labeled_buf / kmx_to_text / key2text_* (drop-in compatible)
+ *  - Semantik identik, tampilan dan struktur kode berbeda
+ * ======================================================================= */
+
+static int km_hex_labeled(BIO *out, const char *label,
+                          const unsigned char *buf, size_t len) {
     size_t i;
 
-    if (BIO_printf(out, "%s\n", label) <= 0)
+    if (out == NULL || label == NULL || (len && buf == NULL)) {
+        ERR_raise(ERR_LIB_USER, ERR_R_PASSED_NULL_PARAMETER);
         return 0;
+    }
+    if (BIO_printf(out, "%s\n", label) <= 0) return 0;
 
-    for (i = 0; i < buflen; i++) {
+    for (i = 0; i < len; ++i) {
         if ((i % LABELED_BUF_PRINT_WIDTH) == 0) {
-            if (i > 0 && BIO_printf(out, "\n") <= 0)
-                return 0;
-            if (BIO_printf(out, "    ") <= 0)
-                return 0;
+            if (i && BIO_printf(out, "\n") <= 0) return 0;
+            if (BIO_printf(out, "    ") <= 0) return 0;
         }
-
-        if (BIO_printf(out, "%02x%s", buf[i], (i == buflen - 1) ? "" : ":") <=
-            0)
+        if (BIO_printf(out, "%02x%s", buf[i], (i + 1 == len) ? "" : ":") <= 0)
             return 0;
     }
-    if (BIO_printf(out, "\n") <= 0)
-        return 0;
-
+    if (BIO_printf(out, "\n") <= 0) return 0;
     return 1;
 }
+
+/* kompat untuk pemanggil lama */
+static int print_labeled_buf(BIO *out, const char *label,
+                             const unsigned char *buf, size_t buflen) {
+    return km_hex_labeled(out, label, buf, buflen);
+}
+
+/* -------------------- helpers untuk kmx_to_text -------------------- */
+
+static int km_write_header(BIO *out, const char *tlsname, int is_priv, int keytype) {
+    const char *role   = is_priv ? "private" : "public";
+    const char *flavor = NULL;
+
+    switch (keytype) {
+        case KEY_TYPE_SIG:
+        case KEY_TYPE_KEM:       flavor = "";               break;
+        case KEY_TYPE_ECP_HYB_KEM:
+        case KEY_TYPE_ECX_HYB_KEM:
+        case KEY_TYPE_HYB_SIG:   flavor = " hybrid";        break;
+        case KEY_TYPE_CMP_SIG:   flavor = " composite";     break;
+        default:
+            ERR_raise(ERR_LIB_USER, KMPROV_R_INVALID_KEY);
+            return 0;
+    }
+    return BIO_printf(out, "%s%s %s:\n", tlsname, flavor, role) > 0;
+}
+
+static int km_decode_rsa_priv_len(const unsigned char *p, size_t maxlen, uint32_t *out_len) {
+    /* meniru perilaku awal: panjang RSA asli tersimpan pada 4 byte di depan */
+    if (!p || !out_len || maxlen < 4) return 0;
+    unsigned char *enc_len = (unsigned char *)OPENSSL_strndup((const char *)p, 4);
+    if (!enc_len) return 0;
+    OPENSSL_cleanse(enc_len, 2); /* pertahankan detail orisinal */
+    DECODE_UINT32(*out_len, enc_len);
+    *out_len += 4;
+    OPENSSL_free(enc_len);
+    return 1;
+}
+
+static int km_print_composite_chunks(BIO *out, const KMX_KEY *okey, int is_priv) {
+    for (int i = 0; i < okey->numkeys; ++i) {
+        char *name = get_cmpname(OBJ_sn2nid(okey->tls_name), i);
+        if (!name) {
+            ERR_raise(ERR_LIB_USER, KMPROV_R_INVALID_KEY);
+            return 0;
+        }
+
+        char label[200];
+        (void)BIO_snprintf(label, sizeof(label), "%s key material:", name);
+
+        if (is_priv) {
+            uint32_t privlen = 0;
+            if (get_kmname_fromtls(name) == 0 /* classical */ &&
+                okey->kmx_provider_ctx.kmx_evp_ctx->evp_info->keytype == EVP_PKEY_RSA) {
+                if (!km_decode_rsa_priv_len(okey->comp_privkey[i],
+                                            okey->privkeylen_cmp[i], &privlen) ||
+                    privlen > okey->privkeylen_cmp[i]) {
+                    OPENSSL_free(name);
+                    ERR_raise(ERR_LIB_USER, KMPROV_R_INVALID_ENCODING);
+                    return 0;
+                }
+            } else {
+                privlen = okey->privkeylen_cmp[i];
+            }
+
+            if (!km_hex_labeled(out, label, okey->comp_privkey[i], privlen)) {
+                OPENSSL_free(name);
+                return 0;
+            }
+        } else {
+            if (!km_hex_labeled(out, label,
+                                okey->comp_pubkey[i], okey->pubkeylen_cmp[i])) {
+                OPENSSL_free(name);
+                return 0;
+            }
+        }
+
+        OPENSSL_free(name);
+    }
+    return 1;
+}
+
+static int km_print_hybrid_split_priv(BIO *out, const KMX_KEY *okey) {
+    /* classic length disimpan pada awal blob priv, sisanya PQ */
+    uint32_t classic_len = 0;
+    size_t pq_fixed = okey->kmx_provider_ctx.kmx_qs_ctx.kem->length_secret_key;
+    size_t space_for_classic = okey->privkeylen - SIZE_OF_UINT32 - pq_fixed;
+
+    if (!okey->privkey) return 0;
+    DECODE_UINT32(classic_len, okey->privkey);
+    if (classic_len > space_for_classic) {
+        ERR_raise(ERR_LIB_USER, KMPROV_R_INVALID_ENCODING);
+        return 0;
+    }
+
+    char label[200];
+    (void)BIO_snprintf(label, sizeof(label), "%s key material:", OBJ_nid2sn(okey->evp_info->nid));
+
+    if (!km_hex_labeled(out, label, okey->comp_privkey[0], classic_len))
+        return 0;
+
+    return km_hex_labeled(out, "PQ key material:",
+                          okey->comp_privkey[okey->numkeys - 1],
+                          okey->privkeylen - classic_len - SIZE_OF_UINT32);
+}
+
+static int km_print_hybrid_split_pub(BIO *out, const KMX_KEY *okey) {
+    uint32_t classic_len = 0;
+    size_t pq_fixed = okey->kmx_provider_ctx.kmx_qs_ctx.kem->length_public_key;
+    size_t space_for_classic = okey->pubkeylen - SIZE_OF_UINT32 - pq_fixed;
+
+    if (!okey->pubkey) return 0;
+    DECODE_UINT32(classic_len, okey->pubkey);
+    if (classic_len > space_for_classic) {
+        ERR_raise(ERR_LIB_USER, KMPROV_R_INVALID_ENCODING);
+        return 0;
+    }
+
+    char label[200];
+    (void)BIO_snprintf(label, sizeof(label), "%s key material:", OBJ_nid2sn(okey->evp_info->nid));
+
+    if (!km_hex_labeled(out, label, okey->comp_pubkey[0], classic_len))
+        return 0;
+
+    return km_hex_labeled(out, "PQ key material:",
+                          okey->comp_pubkey[okey->numkeys - 1],
+                          okey->pubkeylen - classic_len - SIZE_OF_UINT32);
+}
+
+/* -------------------- main printer -------------------- */
 
 static int kmx_to_text(BIO *out, const void *key, int selection) {
     KMX_KEY *okey = (KMX_KEY *)key;
 
-    if (out == NULL || okey == NULL) {
+    if (!out || !okey) {
         ERR_raise(ERR_LIB_USER, ERR_R_PASSED_NULL_PARAMETER);
         return 0;
     }
 
-    if ((selection & OSSL_KEYMGMT_SELECT_PRIVATE_KEY) != 0) {
-        if (okey->privkey == NULL) {
+    const int want_priv = (selection & OSSL_KEYMGMT_SELECT_PRIVATE_KEY) != 0;
+    const int want_pub  = (selection & OSSL_KEYMGMT_SELECT_PUBLIC_KEY)  != 0;
+
+    /* --- header dan validasi berdasarkan selection --- */
+    if (want_priv) {
+        if (!okey->privkey) {
             ERR_raise(ERR_LIB_USER, PROV_R_NOT_A_PRIVATE_KEY);
             return 0;
         }
-
-        switch (okey->keytype) {
-        case KEY_TYPE_SIG:
-        case KEY_TYPE_KEM:
-            if (BIO_printf(out, "%s private key:\n", okey->tls_name) <= 0)
-                return 0;
-            break;
-        case KEY_TYPE_ECP_HYB_KEM:
-        case KEY_TYPE_ECX_HYB_KEM:
-        case KEY_TYPE_HYB_SIG:
-            if (BIO_printf(out, "%s hybrid private key:\n", okey->tls_name) <=
-                0)
-                return 0;
-            break;
-        case KEY_TYPE_CMP_SIG:
-            if (BIO_printf(out, "%s composite private key:\n",
-                           okey->tls_name) <= 0)
-                return 0;
-            break;
-        default:
-            ERR_raise(ERR_LIB_USER, KMPROV_R_INVALID_KEY);
+        if (!km_write_header(out, okey->tls_name, 1, okey->keytype))
             return 0;
-        }
-    } else if ((selection & OSSL_KEYMGMT_SELECT_PUBLIC_KEY) != 0) {
-        if (okey->pubkey == NULL) {
+    } else if (want_pub) {
+        if (!okey->pubkey) {
             ERR_raise(ERR_LIB_USER, PROV_R_NOT_A_PUBLIC_KEY);
             return 0;
         }
-
-        switch (okey->keytype) {
-        case KEY_TYPE_SIG:
-        case KEY_TYPE_KEM:
-            if (BIO_printf(out, "%s public key:\n", okey->tls_name) <= 0)
-                return 0;
-            break;
-        case KEY_TYPE_ECP_HYB_KEM:
-        case KEY_TYPE_ECX_HYB_KEM:
-        case KEY_TYPE_HYB_SIG:
-            if (BIO_printf(out, "%s hybrid public key:\n", okey->tls_name) <= 0)
-                return 0;
-            break;
-        case KEY_TYPE_CMP_SIG:
-            if (BIO_printf(out, "%s composite public key:\n", okey->tls_name) <=
-                0)
-                return 0;
-            break;
-        default:
-            ERR_raise(ERR_LIB_USER, KMPROV_R_INVALID_KEY);
+        if (!km_write_header(out, okey->tls_name, 0, okey->keytype))
             return 0;
+    }
+
+    /* --- isi sesuai tipe & selection --- */
+    if (want_priv && okey->privkey) {
+        if (okey->keytype == KEY_TYPE_CMP_SIG) {
+            if (!km_print_composite_chunks(out, okey, 1)) return 0;
+        } else if (okey->numkeys > 1) { /* hybrid */
+            if (!km_print_hybrid_split_priv(out, okey)) return 0;
+        } else { /* plain PQ */
+            if (!km_hex_labeled(out, "PQ key material:",
+                                okey->comp_privkey[okey->numkeys - 1],
+                                okey->privkeylen))
+                return 0;
         }
     }
 
-    if ((selection & OSSL_KEYMGMT_SELECT_PRIVATE_KEY) != 0) {
-        if (okey->privkey) {
-            if (okey->keytype == KEY_TYPE_CMP_SIG) {
-                char *name;
-                char label[200];
-                int i;
-                uint32_t privlen = 0;
-                for (i = 0; i < okey->numkeys; i++) {
-                    if ((name = get_cmpname(OBJ_sn2nid(okey->tls_name), i)) ==
-                        NULL) {
-                        ERR_raise(ERR_LIB_USER, KMPROV_R_INVALID_KEY);
-                        return 0;
-                    }
-                    sprintf(label, "%s key material:", name);
-
-                    if (get_kmname_fromtls(name) == 0 // classical key
-                        && okey->kmx_provider_ctx.kmx_evp_ctx->evp_info
-                                   ->keytype ==
-                               EVP_PKEY_RSA) { // get the RSA real key size
-                        unsigned char *enc_len =
-                            (unsigned char *)OPENSSL_strndup(
-                                okey->comp_privkey[i], 4);
-                        OPENSSL_cleanse(enc_len, 2);
-                        DECODE_UINT32(privlen, enc_len);
-                        privlen += 4;
-                        OPENSSL_free(enc_len);
-                        if (privlen > okey->privkeylen_cmp[i]) {
-                            OPENSSL_free(name);
-                            ERR_raise(ERR_LIB_USER, KMPROV_R_INVALID_ENCODING);
-                            return 0;
-                        }
-                    } else
-                        privlen = okey->privkeylen_cmp[i];
-                    if (!print_labeled_buf(out, label, okey->comp_privkey[i],
-                                           privlen))
-                        return 0;
-
-                    OPENSSL_free(name);
-                }
-            } else {
-                if (okey->numkeys > 1) { // hybrid key
-                    char classic_label[200];
-                    uint32_t classic_key_len = 0;
-                    size_t fixed_pq_privkey_len =
-                        okey->kmx_provider_ctx.kmx_qs_ctx.kem
-                            ->length_secret_key;
-                    size_t space_for_classical_privkey = okey->privkeylen -
-                                                         SIZE_OF_UINT32 -
-                                                         fixed_pq_privkey_len;
-                    sprintf(classic_label, "%s key material:",
-                            OBJ_nid2sn(okey->evp_info->nid));
-                    DECODE_UINT32(classic_key_len, okey->privkey);
-                    if (classic_key_len > space_for_classical_privkey) {
-                        ERR_raise(ERR_LIB_USER, KMPROV_R_INVALID_ENCODING);
-                        return 0;
-                    }
-                    if (!print_labeled_buf(out, classic_label,
-                                           okey->comp_privkey[0],
-                                           classic_key_len))
-                        return 0;
-                    /* finally print pure PQ key */
-                    if (!print_labeled_buf(
-                            out, "PQ key material:",
-                            okey->comp_privkey[okey->numkeys - 1],
-                            okey->privkeylen - classic_key_len -
-                                SIZE_OF_UINT32))
-                        return 0;
-                } else { // plain PQ key
-                    if (!print_labeled_buf(
-                            out, "PQ key material:",
-                            okey->comp_privkey[okey->numkeys - 1],
-                            okey->privkeylen))
-                        return 0;
-                }
-            }
-        }
-    }
-    if ((selection & OSSL_KEYMGMT_SELECT_PUBLIC_KEY) != 0) {
-        if (okey->pubkey) {
-            if (okey->keytype == KEY_TYPE_CMP_SIG) {
-                char *name;
-                char label[200];
-                int i;
-                for (i = 0; i < okey->numkeys; i++) {
-                    if ((name = get_cmpname(OBJ_sn2nid(okey->tls_name), i)) ==
-                        NULL) {
-                        ERR_raise(ERR_LIB_USER, KMPROV_R_INVALID_KEY);
-                        return 0;
-                    }
-                    sprintf(label, "%s key material:", name);
-
-                    if (!print_labeled_buf(out, label, okey->comp_pubkey[i],
-                                           okey->pubkeylen_cmp[i]))
-                        return 0;
-
-                    OPENSSL_free(name);
-                }
-            } else {
-                if (okey->numkeys > 1) { // hybrid key
-                    char classic_label[200];
-                    uint32_t classic_key_len = 0;
-                    size_t fixed_pq_pubkey_len =
-                        okey->kmx_provider_ctx.kmx_qs_ctx.kem
-                            ->length_public_key;
-                    size_t space_for_classical_pubkey =
-                        okey->pubkeylen - SIZE_OF_UINT32 - fixed_pq_pubkey_len;
-                    DECODE_UINT32(classic_key_len, okey->pubkey);
-                    if (classic_key_len > space_for_classical_pubkey) {
-                        ERR_raise(ERR_LIB_USER, KMPROV_R_INVALID_ENCODING);
-                        return 0;
-                    }
-                    sprintf(classic_label, "%s key material:",
-                            OBJ_nid2sn(okey->evp_info->nid));
-                    if (!print_labeled_buf(out, classic_label,
-                                           okey->comp_pubkey[0],
-                                           classic_key_len))
-                        return 0;
-                    /* finally print pure PQ key */
-                    if (!print_labeled_buf(out, "PQ key material:",
-                                           okey->comp_pubkey[okey->numkeys - 1],
-                                           okey->pubkeylen - classic_key_len -
-                                               SIZE_OF_UINT32))
-                        return 0;
-                } else { // PQ key only
-                    if (!print_labeled_buf(out, "PQ key material:",
-                                           okey->comp_pubkey[okey->numkeys - 1],
-                                           okey->pubkeylen))
-                        return 0;
-                }
-            }
+    if (want_pub && okey->pubkey) {
+        if (okey->keytype == KEY_TYPE_CMP_SIG) {
+            if (!km_print_composite_chunks(out, okey, 0)) return 0;
+        } else if (okey->numkeys > 1) { /* hybrid */
+            if (!km_print_hybrid_split_pub(out, okey)) return 0;
+        } else { /* PQ only */
+            if (!km_hex_labeled(out, "PQ key material:",
+                                okey->comp_pubkey[okey->numkeys - 1],
+                                okey->pubkeylen))
+                return 0;
         }
     }
 
     return 1;
 }
 
-static void *key2text_newctx(void *provctx) { return provctx; }
+/* -------------------- text encoder ctx wrappers -------------------- */
 
-static void key2text_freectx(ossl_unused void *vctx) {}
-
-static int
-key2text_encode(void *vctx, const void *key, int selection, OSSL_CORE_BIO *cout,
-                int (*key2text)(BIO *out, const void *key, int selection),
-                OSSL_PASSPHRASE_CALLBACK *cb, void *cbarg) {
-    BIO *out = km_bio_new_from_core_bio(vctx, cout);
-    int ret;
-
-    if (out == NULL)
-        return 0;
-
-    ret = key2text(out, key, selection);
-    BIO_free(out);
-
-    return ret;
+static void *key2text_newctx(void *provctx) {
+    KM_ENC_PRINTF("KM ENC provider: key2text_newctx called\n");
+    return provctx;
 }
+
+static void key2text_freectx(ossl_unused void *vctx) {
+    KM_ENC_PRINTF("KM ENC provider: key2text_freectx called\n");
+}
+
+/* keep signature/behavior; tambah guard & logging ringan */
+static int key2text_encode(void *vctx, const void *key, int selection, OSSL_CORE_BIO *cout,
+                           int (*key2text)(BIO *out, const void *key, int selection),
+                           OSSL_PASSPHRASE_CALLBACK *cb, void *cbarg) {
+    (void)cb; (void)cbarg; /* tidak dipakai di path text */
+
+    BIO *out = km_bio_new_from_core_bio(vctx, cout);
+    if (!out) return 0;
+
+    KM_ENC_PRINTF("KM ENC provider: key2text_encode called\n");
+
+    /* panggil printer actual */
+    const int ok = key2text(out, key, selection);
+    BIO_free(out);
+    return ok;
+}
+
 
 #define MAKE_TEXT_ENCODER(kmkemhyb, impl)                                     \
     static OSSL_FUNC_encoder_import_object_fn impl##2text_import_object;       \

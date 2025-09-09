@@ -169,48 +169,70 @@ You should see `mldsa44`, `mldsa65`, `mldsa87` under signatures, and `MLKEM512`,
 ---
 
 ## 6) Run the tests
+# Ensure your provider is visible
+export OPENSSL_MODULES=/opt/openssl-master/lib64/ossl-modules   # or lib/ossl-modules
 
-> Ensure `OPENSSL_MODULES` points to your modules directory:
->
-> ```bash
-> export OPENSSL_MODULES=/opt/openssl-master/lib/ossl-modules
-> ```
+# 1) Create server.cnf with SAN
+cat > server.cnf <<'EOF'
+[ req ]
+distinguished_name = dn
+x509_extensions = req_ext
+prompt = no
 
-### Signature (ML‑DSA 44/65/87)
+[ dn ]
+CN = localhost
 
-```bash
-cd ~/kookmin-openssl-provider/tests
+[ req_ext ]
+subjectAltName = @alt
+extendedKeyUsage = serverAuth
+keyUsage = digitalSignature
+basicConstraints = CA:FALSE
 
-cc test_sig.c -o test_sig \
-  -I/opt/openssl-master/include \
-  -L/opt/openssl-master/lib -lcrypto \
-  -Wl,-rpath,/opt/openssl-master/lib
+[ alt ]
+DNS.1 = localhost
+IP.1  = 127.0.0.1
+EOF
 
-./test_sig
-# Expected output (pure sign/verify):
-# [mldsa44] pure verify -> 1 (1=ok)
-# [mldsa65] pure verify -> 1 (1=ok)
-# [mldsa87] pure verify -> 1 (1=ok)
-```
+# 2) Generate server key
+/opt/openssl-master/bin/openssl ecparam -name prime256v1 -genkey -noout -out server.key
 
-> **Note:** This provider currently supports **pure** sign/verify (`EVP_PKEY_sign/verify`) for ML‑DSA. Digest-based flows (`EVP_DigestSign*`) are intentionally not used in the test.
+# 3) Generate CSR
+/opt/openssl-master/bin/openssl req -new -key server.key -out server.csr -config server.cnf
 
-### KEM (ML‑KEM 512/768/1024)
+# 4) Sign with your CA
+/opt/openssl-master/bin/openssl x509 -req -in server.csr \
+  -CA ca.crt -CAkey ca.key -CAcreateserial \
+  -out server.crt -days 365 -sha256 \
+  -extfile server.cnf -extensions req_ext
 
-```bash
-export OPENSSL_MODULES=/opt/openssl-master/lib/ossl-modules
+# 5) Verify SAN
+/opt/openssl-master/bin/openssl x509 -in server.crt -noout -text | grep -A2 "Subject Alternative Name"
 
-cc test_kem.c -o test_kem \
-  -I/opt/openssl-master/include \
-  -L/opt/openssl-master/lib -lcrypto \
-  -Wl,-rpath,/opt/openssl-master/lib
+# 6) Run TLS server (hybrid KEM group)
+/opt/openssl-master/bin/openssl s_server \
+  -provider kookminlib -provider default \
+  -accept 4433 -www \
+  -cert server.crt -key server.key \
+  -tls1_3 -ciphersuites TLS_AES_256_GCM_SHA384 \
+  -groups X25519MLKEM768
 
-./test_kem
-# Expected output:
-# [MLKEM512]  KEM OK: shared secret match (ctlen=..., seclen=32)
-# [MLKEM768]  KEM OK: shared secret match (ctlen=..., seclen=32)
-# [MLKEM1024] KEM OK: shared secret match (ctlen=..., seclen=32)
-```
+# 7) Test with OpenSSL client
+/opt/openssl-master/bin/openssl s_client \
+  -provider kookminlib -provider default \
+  -connect localhost:4433 -tls1_3 \
+  -ciphersuites TLS_AES_256_GCM_SHA384 \
+  -groups X25519MLKEM768 -msg -state
+
+# 8) Trust your CA (system-wide)
+sudo cp ca.crt /usr/local/share/ca-certificates/local-test-ca.crt
+sudo update-ca-certificates --fresh
+
+# 9) Add CA to Chrome’s NSS DB
+mkdir -p "$HOME/.pki/nssdb"
+certutil -N -d sql:$HOME/.pki/nssdb --empty-password 2>/dev/null || true
+certutil -A -d sql:$HOME/.pki/nssdb -t "C,," -n "Local Test CA" -i ca.crt
+certutil -L -d sql:$HOME/.pki/nssdb | grep "Local Test CA"
+
 
 ---
 
