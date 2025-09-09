@@ -171,44 +171,79 @@ You should see `mldsa44`, `mldsa65`, `mldsa87` under signatures, and `MLKEM512`,
 ## 6) Run the tests
 # Ensure your provider is visible
 export OPENSSL_MODULES=/opt/openssl-master/lib64/ossl-modules   # or lib/ossl-modules
+export OPENSSL_CONF=/opt/openssl-master/ssl/openssl.cnf
 
-# 1) Create server.cnf with SAN
+# a) Create server.cnf with SAN
 cat > server.cnf <<'EOF'
 [ req ]
 distinguished_name = dn
-x509_extensions = req_ext
+x509_extensions = v3_req
 prompt = no
 
 [ dn ]
 CN = localhost
 
-[ req_ext ]
-subjectAltName = @alt
+[ v3_req ]
+basicConstraints = critical, CA:FALSE
+keyUsage = critical, digitalSignature
 extendedKeyUsage = serverAuth
-keyUsage = digitalSignature
-basicConstraints = CA:FALSE
+subjectAltName = @alt
 
 [ alt ]
 DNS.1 = localhost
 IP.1  = 127.0.0.1
+IP.2  = ::1
 EOF
 
-# 2) Generate server key
+# b) Generate server key (ECDSA P-256)
 /opt/openssl-master/bin/openssl ecparam -name prime256v1 -genkey -noout -out server.key
+chmod 600 server.key
 
-# 3) Generate CSR
+# c) Generate CSR
 /opt/openssl-master/bin/openssl req -new -key server.key -out server.csr -config server.cnf
+# (Optional) Inspect CSR
+/opt/openssl-master/bin/openssl req -in server.csr -noout -text
 
-# 4) Sign with your CA
+# d) Generate CA private key (RSA-4096)
+/opt/openssl-master/bin/openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:4096 -out ca.key
+chmod 600 ca.key
+
+# e) Create ca.cnf
+cat > ca.cnf <<'EOF'
+[ req ]
+distinguished_name = dn
+x509_extensions     = v3_ca
+prompt = no
+
+[ dn ]
+C  = KR
+ST = Seoul
+O  = KM-Research
+CN = KM Root CA
+
+[ v3_ca ]
+basicConstraints = critical, CA:true, pathlen:1
+keyUsage         = critical, keyCertSign, cRLSign
+subjectKeyIdentifier = hash
+authorityKeyIdentifier = keyid:always,issuer
+EOF
+
+# f) Self-sign Root CA certificate
+/opt/openssl-master/bin/openssl req -x509 -new -key ca.key -out ca.crt -days 3650 -sha256 -config ca.cnf
+
+# (Optional) Inspect CA cert
+/opt/openssl-master/bin/openssl x509 -in ca.crt -noout -text
+
+# g) Issue server certificate (sign CSR with your CA)
 /opt/openssl-master/bin/openssl x509 -req -in server.csr \
   -CA ca.crt -CAkey ca.key -CAcreateserial \
   -out server.crt -days 365 -sha256 \
-  -extfile server.cnf -extensions req_ext
+  -extfile server.cnf -extensions v3_req
 
-# 5) Verify SAN
+# h) Verify SAN is present
 /opt/openssl-master/bin/openssl x509 -in server.crt -noout -text | grep -A2 "Subject Alternative Name"
 
-# 6) Run TLS server (hybrid KEM group)
+# i) Run TLS 1.3 server (hybrid KEM group)
 /opt/openssl-master/bin/openssl s_server \
   -provider kookminlib -provider default \
   -accept 4433 -www \
@@ -216,22 +251,23 @@ EOF
   -tls1_3 -ciphersuites TLS_AES_256_GCM_SHA384 \
   -groups X25519MLKEM768
 
-# 7) Test with OpenSSL client
+# j) Test with OpenSSL client
 /opt/openssl-master/bin/openssl s_client \
   -provider kookminlib -provider default \
   -connect localhost:4433 -tls1_3 \
   -ciphersuites TLS_AES_256_GCM_SHA384 \
   -groups X25519MLKEM768 -msg -state
 
-# 8) Trust your CA (system-wide)
+# k) Trust your CA (system-wide, Debian/Ubuntu)
 sudo cp ca.crt /usr/local/share/ca-certificates/local-test-ca.crt
 sudo update-ca-certificates --fresh
 
-# 9) Add CA to Chrome’s NSS DB
-mkdir -p "$HOME/.pki/nssdb"
-certutil -N -d sql:$HOME/.pki/nssdb --empty-password 2>/dev/null || true
-certutil -A -d sql:$HOME/.pki/nssdb -t "C,," -n "Local Test CA" -i ca.crt
+# l) Add CA to Chrome’s NSS DB (user profile) for Trust browser
 certutil -L -d sql:$HOME/.pki/nssdb | grep "Local Test CA"
+certutil -M -d sql:$HOME/.pki/nssdb -n "Local Test CA" -t "C,,"
+certutil -L -d sql:$HOME/.pki/nssdb -n "Local Test CA"
+certutil -D -d sql:$HOME/.pki/nssdb -n "Local Test CA"
+certutil -A -d sql:$HOME/.pki/nssdb -t "C,," -n "Local Test CA" -i ca.crt
 
 
 ---

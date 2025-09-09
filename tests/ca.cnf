@@ -1,0 +1,16 @@
+[ req ]
+distinguished_name = dn
+x509_extensions     = v3_ca
+prompt = no
+
+[ dn ]
+C  = KR
+ST = Seoul
+O  = KM-Research
+CN = KM Root CA
+
+[ v3_ca ]
+basicConstraints = critical, CA:true, pathlen:1
+keyUsage         = critical, keyCertSign, cRLSign
+subjectKeyIdentifier = hash
+authorityKeyIdentifier = keyid:always,issuer

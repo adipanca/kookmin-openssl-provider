@@ -1,17 +1,18 @@
 [ req ]
 distinguished_name = dn
-x509_extensions = req_ext
+x509_extensions = v3_req
 prompt = no
 
 [ dn ]
 CN = localhost
 
-[ req_ext ]
-subjectAltName = @alt
+[ v3_req ]
+basicConstraints = critical, CA:FALSE
+keyUsage = critical, digitalSignature
 extendedKeyUsage = serverAuth
-keyUsage = digitalSignature
-basicConstraints = CA:FALSE
+subjectAltName = @alt
 
 [ alt ]
 DNS.1 = localhost
 IP.1  = 127.0.0.1
+IP.2  = ::1
